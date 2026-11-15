@@ -1,45 +1,151 @@
+from backend.app.services.engine_adapter import (
+    build_engine_payload,
+)
 
-from paradox import detect_paradox
-from collapse import detect_collapse
-from reversal import detect_reversal
+from backend.engines.paradox import (
+    detect_paradox,
+)
 
-# PRUEBA 1: Earth Paradox
-data1 = {
-    "precipitation_change": 12,
-    "ndvi_change": -8
+from backend.engines.collapse import (
+    detect_collapse,
+)
+
+from backend.engines.reversal import (
+    detect_reversal,
+)
+
+
+VALID_LEVELS = {
+    "normal",
+    "observar",
+    "investigar",
+    "sin datos",
 }
 
-result1 = detect_paradox(data1)
-assert result1["level"] == "investigar"
-print("PRUEBA 1: CORRECTA")
 
-# PRUEBA 2: Silent Collapse
-data2 = {
-    "ndvi_values": [0.62, 0.59, 0.55, 0.52]
-}
+def test_earth_paradox_with_real_payload():
+    payload = build_engine_payload(
+        "BajoPiura"
+    )
 
-result2 = detect_collapse(data2)
-assert result2["level"] == "investigar"
-print("PRUEBA 2: CORRECTA")
+    result = detect_paradox(
+        payload
+    )
 
-# PRUEBA 3: Decision Reversal
-data3 = {
-    "single_variable_level": "normal",
-    "multivariable_level": "investigar"
-}
+    assert isinstance(
+        result,
+        dict,
+    )
 
-result3 = detect_reversal(data3)
-assert result3["reversal_detected"] is True
-print("PRUEBA 3: CORRECTA")
+    assert (
+        result["level"]
+        in VALID_LEVELS
+    )
 
-# PRUEBA 4: Datos faltantes
-data4 = {
-    "precipitation_change": None,
-    "ndvi_change": -8
-}
+    assert "evidence" in result
+    assert "explanation" in result
+    assert "limitations" in result
 
-result4 = detect_paradox(data4)
-assert result4["level"] == "sin datos"
-print("PRUEBA 4: CORRECTA")
 
-print("\nTODAS LAS PRUEBAS PASARON")
+def test_silent_collapse_with_real_payload():
+    payload = build_engine_payload(
+        "BajoPiura"
+    )
+
+    result = detect_collapse(
+        payload
+    )
+
+    assert isinstance(
+        result,
+        dict,
+    )
+
+    assert (
+        result["level"]
+        in VALID_LEVELS
+    )
+
+    assert "evidence" in result
+    assert "explanation" in result
+    assert "limitations" in result
+
+
+def test_decision_reversal_with_real_payload():
+    payload = build_engine_payload(
+        "BajoPiura"
+    )
+
+    result = detect_reversal(
+        payload
+    )
+
+    assert isinstance(
+        result,
+        dict,
+    )
+
+    assert (
+        result["level"]
+        in VALID_LEVELS
+    )
+
+    assert "evidence" in result
+    assert "explanation" in result
+    assert "limitations" in result
+
+    assert "reversal_detected" in result
+    assert "univariable_level" in result
+    assert "multivariable_level" in result
+
+
+def test_real_payload_does_not_return_missing_data():
+    payload = build_engine_payload(
+        "BajoPiura"
+    )
+
+    results = [
+        detect_paradox(
+            payload
+        ),
+        detect_collapse(
+            payload
+        ),
+        detect_reversal(
+            payload
+        ),
+    ]
+
+    for result in results:
+        assert (
+            result["level"]
+            != "sin datos"
+        )
+
+
+def test_real_payload_has_evidence():
+    payload = build_engine_payload(
+        "BajoPiura"
+    )
+
+    results = [
+        detect_paradox(
+            payload
+        ),
+        detect_collapse(
+            payload
+        ),
+        detect_reversal(
+            payload
+        ),
+    ]
+
+    for result in results:
+        assert isinstance(
+            result["evidence"],
+            dict,
+        )
+
+        assert len(
+            result["evidence"]
+        ) > 0

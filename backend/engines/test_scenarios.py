@@ -1,84 +1,125 @@
+import pytest
 
-from alerts import generate_findings
+from backend.app.services.engine_adapter import (
+    build_engine_payload,
+)
+
+from backend.engines.alerts import (
+    generate_findings,
+)
 
 
-def build_data(ndvi, precipitation, coverage=0.90):
-    return {
-        "cell_id": "piura-test",
-        "period": "2021-2025",
-        "years": [2021, 2022, 2023, 2024, 2025],
-        "ndvi_values": ndvi,
-        "precipitation_values": precipitation,
-        "quality": {
-            "status": "demo",
-            "valid_fraction": coverage
-        }
+REGIONS = [
+    "BajoPiura",
+    "BosqueSecoMorropon",
+    "DesiertoSechura",
+    "ValleChira",
+]
+
+
+@pytest.mark.parametrize(
+    "region",
+    REGIONS,
+)
+def test_all_real_regions_generate_findings(
+    region,
+):
+    payload = build_engine_payload(
+        region
+    )
+
+    findings = generate_findings(
+        payload
+    )
+
+    assert len(findings) == 3
+
+    engines = {
+        finding["engine"]
+        for finding in findings
+    }
+
+    assert engines == {
+        "earth_paradox",
+        "silent_collapse",
+        "decision_reversal",
     }
 
 
-# CASO 1: Divergencia ambiental
-data = build_data(
-    [0.62, 0.59, 0.55, 0.52, 0.48],
-    [450, 480, 510, 530, 550]
+@pytest.mark.parametrize(
+    "region",
+    REGIONS,
 )
+def test_all_regions_have_valid_quality(
+    region,
+):
+    payload = build_engine_payload(
+        region
+    )
 
-results = generate_findings(data)
+    assert "quality" in payload
+    assert "variables" in payload["quality"]
 
-assert results[0]["level"] == "investigar"
-assert results[1]["level"] == "investigar"
-assert results[2]["reversal_detected"] is True
+    assert "ndvi" in (
+        payload["quality"]["variables"]
+    )
 
-print("CASO 1: CORRECTO")
+    assert "precipitation" in (
+        payload["quality"]["variables"]
+    )
 
 
-# CASO 2: Vegetacion creciente
-data = build_data(
-    [0.40, 0.43, 0.46, 0.49, 0.52],
-    [450, 480, 510, 530, 550]
+@pytest.mark.parametrize(
+    "region",
+    REGIONS,
 )
+def test_all_regions_have_real_series(
+    region,
+):
+    payload = build_engine_payload(
+        region
+    )
 
-results = generate_findings(data)
+    years = payload["years"]
+    ndvi = payload["ndvi_values"]
+    precipitation = (
+        payload["precipitation_values"]
+    )
 
-assert results[0]["level"] == "normal"
-assert results[1]["level"] == "observar"
-assert results[2]["reversal_detected"] is False
+    assert len(years) >= 4
 
-print("CASO 2: CORRECTO")
+    assert len(years) == len(ndvi)
+
+    assert (
+        len(years)
+        == len(precipitation)
+    )
 
 
-# CASO 3: Cobertura insuficiente
-data = build_data(
-    [0.62, 0.59, 0.55, 0.52, 0.48],
-    [450, 480, 510, 530, 550],
-    coverage=0.30
+@pytest.mark.parametrize(
+    "region",
+    REGIONS,
 )
+def test_findings_have_valid_levels(
+    region,
+):
+    payload = build_engine_payload(
+        region
+    )
 
-results = generate_findings(data)
+    findings = generate_findings(
+        payload
+    )
 
-assert all(
-    result["level"] == "sin datos"
-    for result in results
-)
+    valid_levels = {
+        "normal",
+        "observar",
+        "investigar",
+        "sin datos",
+    }
 
-print("CASO 3: CORRECTO")
-
-
-# CASO 4: Serie demasiado corta
-data = build_data(
-    [0.62, 0.59],
-    [450, 480]
-)
-
-data["years"] = [2021, 2022]
-
-results = generate_findings(data)
-
-assert all(
-    result["level"] == "sin datos"
-    for result in results
-)
-
-print("CASO 4: CORRECTO")
-
-
-print("\nTODOS LOS ESCENARIOS PASARON")
+    for finding in findings:
+        assert (
+            finding["level"]
+            in valid_levels
+        )

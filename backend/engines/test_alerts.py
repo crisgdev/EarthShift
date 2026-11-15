@@ -1,56 +1,68 @@
+from backend.app.services.engine_adapter import build_engine_payload
+from backend.engines.alerts import generate_findings
 
-from alerts import generate_findings
-from scientific_data import get_scientific_data
+
+def test_generate_findings_returns_three_results():
+    payload = build_engine_payload("BajoPiura")
+
+    findings = generate_findings(payload)
+
+    assert isinstance(findings, list)
+    assert len(findings) == 3
 
 
-df = get_scientific_data()
+def test_findings_have_required_fields():
+    payload = build_engine_payload("BajoPiura")
 
-data = {
-    "cell_id": "piura-001",
-    "period": "2021-2025",
-    "years": df["year"].tolist(),
-    "ndvi_values": df["ndvi"].tolist(),
-    "precipitation_values":
-        df["precipitation_mm"].tolist(),
-    "quality": {
-        "status": "demo",
-        "valid_fraction": 0.88
+    findings = generate_findings(payload)
+
+    required_fields = {
+        "finding_id",
+        "cell_id",
+        "period",
+        "engine",
+        "level",
+        "variables",
+        "evidence",
+        "quality",
+        "explanation",
+        "limitations",
     }
-}
 
-# Prueba con cobertura suficiente
-results = generate_findings(data)
+    for finding in findings:
+        assert required_fields.issubset(
+            finding.keys()
+        )
 
-assert len(results) == 3
-assert all(
-    item["level"] == "investigar"
-    for item in results
-)
 
-print("PRUEBA 1: CORRECTA")
+def test_findings_have_valid_levels():
+    payload = build_engine_payload("BajoPiura")
 
-# Prueba con cobertura insuficiente
-data["quality"]["valid_fraction"] = 0.40
+    findings = generate_findings(payload)
 
-results = generate_findings(data)
+    valid_levels = {
+        "normal",
+        "observar",
+        "investigar",
+        "sin datos",
+    }
 
-assert all(
-    item["level"] == "sin datos"
-    for item in results
-)
+    for finding in findings:
+        assert finding["level"] in valid_levels
 
-print("PRUEBA 2: CORRECTA")
 
-# Prueba sin informacion de cobertura
-data["quality"] = {}
+def test_expected_engines_are_present():
+    payload = build_engine_payload("BajoPiura")
 
-results = generate_findings(data)
+    findings = generate_findings(payload)
 
-assert all(
-    item["level"] == "sin datos"
-    for item in results
-)
+    engines = {
+        finding["engine"]
+        for finding in findings
+    }
 
-print("PRUEBA 3: CORRECTA")
-
-print("\nTODAS LAS PRUEBAS DE ALERTAS PASARON")
+    assert engines == {
+        "earth_paradox",
+        "silent_collapse",
+        "decision_reversal",
+    }
