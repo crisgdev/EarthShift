@@ -96,6 +96,34 @@ NASA_CATALOG: List[Dict[str, Any]] = [
         ),
     },
     {
+        "id": "nasa_eonet",
+        "variable": "natural_events",
+        "provider": "NASA",
+        "mission": "EONET",
+        "product": "EONET API",
+        "version": "v3",
+        "bands": [],
+        "unit": "event_metadata",
+        "spatial_resolution": "event dependent",
+        "temporal_resolution": "near real time",
+        "access_methods": [
+            "NASA EONET API",
+        ],
+        "endpoint": (
+            "https://eonet.gsfc.nasa.gov"
+            "/api/v3/events"
+        ),
+        "status": "operational_verified",
+        "verified_against_current_csv": False,
+        "api_verified": True,
+        "used_by_engines": False,
+        "notes": (
+            "Segunda fuente NASA real verificada mediante API. "
+            "Se utiliza como fuente contextual de eventos. "
+            "No sustituye MODIS ni GPM IMERG en los motores."
+        ),
+    },
+    {
         "id": "modis_lst",
         "variable": "land_surface_temperature",
         "provider": "NASA",

@@ -11,6 +11,11 @@ from backend.connectors.nasa_power import (
     request_daily_point,
 )
 
+from backend.connectors.nasa_eonet import (
+    NASAEONETError,
+    request_events,
+)
+
 
 router = APIRouter(
     prefix="/nasa",
@@ -90,6 +95,50 @@ def nasa_power(
         )
 
     except NASAPowerError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=str(error),
+        )
+
+
+@router.get("/eonet")
+def nasa_eonet(
+    status: str = Query(
+        default="open",
+    ),
+    limit: int = Query(
+        default=10,
+        ge=1,
+        le=100,
+    ),
+    days: int | None = Query(
+        default=30,
+        ge=1,
+    ),
+    category: str | None = Query(
+        default=None,
+    ),
+):
+    try:
+        result = request_events(
+            status=status,
+            limit=limit,
+            days=days,
+            category=category,
+        )
+
+        return {
+            "status": "ok",
+            **result,
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
+
+    except NASAEONETError as error:
         raise HTTPException(
             status_code=502,
             detail=str(error),
