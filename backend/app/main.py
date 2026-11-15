@@ -1,6 +1,15 @@
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import (
     CORSMiddleware,
+)
+
+from backend.app.config import (
+    APP_NAME,
+    APP_VERSION,
+    FRONTEND_ORIGINS,
 )
 
 from backend.app.routes.findings import (
@@ -12,21 +21,46 @@ from backend.app.routes.data import (
 )
 
 
-app = FastAPI(
-    title="EarthShift API",
-    description=(
-        "Backend API para EarthShift"
+logging.basicConfig(
+    level=logging.INFO,
+    format=(
+        "%(asctime)s | "
+        "%(levelname)s | "
+        "%(name)s | "
+        "%(message)s"
     ),
-    version="0.2.0",
+)
+
+
+logger = logging.getLogger(
+    "earthshift"
+)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info(
+        "EarthShift API iniciada"
+    )
+
+    yield
+
+    logger.info(
+        "EarthShift API detenida"
+    )
+
+
+app = FastAPI(
+    title=APP_NAME,
+    description="Backend API para EarthShift",
+    version=APP_VERSION,
+    lifespan=lifespan,
 )
 
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=FRONTEND_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,7 +83,7 @@ def root():
     return {
         "project": "EarthShift",
         "status": "ok",
-        "version": "0.2.0",
+        "version": APP_VERSION,
     }
 
 
@@ -57,6 +91,6 @@ def root():
 def health():
     return {
         "status": "ok",
-        "service": "EarthShift API",
-        "version": "0.2.0",
+        "service": APP_NAME,
+        "version": APP_VERSION,
     }

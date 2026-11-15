@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Query
 
 from backend.app.services.engine_adapter import (
@@ -9,6 +11,140 @@ from backend.app.services.engine_adapter import (
 router = APIRouter(
     tags=["EarthShift Data"]
 )
+
+
+ALLOWED_VARIABLES = {
+    "ndvi",
+    "precipitation",
+}
+
+
+def parse_bbox(
+    bbox: Optional[str],
+):
+    if bbox is None:
+        return None
+
+    try:
+        values = [
+            float(item.strip())
+            for item in bbox.split(",")
+        ]
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="bbox invalido.",
+        )
+
+    if len(values) != 4:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "bbox debe tener formato "
+                "west,south,east,north."
+            ),
+        )
+
+    west, south, east, north = values
+
+    if west >= east:
+        raise HTTPException(
+            status_code=400,
+            detail="bbox west debe ser menor que east.",
+        )
+
+    if south >= north:
+        raise HTTPException(
+            status_code=400,
+            detail="bbox south debe ser menor que north.",
+        )
+
+    if (
+        west < -180
+        or east > 180
+        or south < -90
+        or north > 90
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="bbox fuera de rango.",
+        )
+
+    return {
+        "west": west,
+        "south": south,
+        "east": east,
+        "north": north,
+    }
+
+
+def parse_variables(
+    variables: Optional[str],
+):
+    if variables is None:
+        return [
+            "ndvi",
+            "precipitation",
+        ]
+
+    parsed = [
+        item.strip()
+        for item in variables.split(",")
+        if item.strip()
+    ]
+
+    if not parsed:
+        raise HTTPException(
+            status_code=400,
+            detail="variables no puede estar vacio.",
+        )
+
+    invalid = [
+        item
+        for item in parsed
+        if item not in ALLOWED_VARIABLES
+    ]
+
+    if invalid:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Variable no soportada.",
+                "invalid": invalid,
+                "allowed": sorted(
+                    ALLOWED_VARIABLES
+                ),
+            },
+        )
+
+    return parsed
+
+
+def resolve_region(
+    region: Optional[str],
+    cell_id: Optional[str],
+):
+    selected = (
+        cell_id
+        or region
+        or "BajoPiura"
+    )
+
+    available = (
+        get_available_regions()
+    )
+
+    if selected not in available:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Region/cell_id invalido.",
+                "value": selected,
+                "available": available,
+            },
+        )
+
+    return selected
 
 
 @router.get("/variables")
@@ -35,9 +171,19 @@ def get_variables():
 
 
 @router.get("/cells")
-def get_cells():
+def get_cells(
+    bbox: Optional[str] = Query(
+        default=None
+    )
+):
     try:
-        regions = get_available_regions()
+        parsed_bbox = parse_bbox(
+            bbox
+        )
+
+        regions = (
+            get_available_regions()
+        )
 
         cells = [
             {
@@ -52,8 +198,12 @@ def get_cells():
         return {
             "status": "ok",
             "total": len(cells),
+            "bbox": parsed_bbox,
             "cells": cells,
         }
+
+    except HTTPException:
+        raise
 
     except Exception as error:
         raise HTTPException(
@@ -64,13 +214,34 @@ def get_cells():
 
 @router.get("/series")
 def get_series(
-    region: str = Query(
-        default="BajoPiura"
-    )
+    region: Optional[str] = Query(
+        default=None
+    ),
+    cell_id: Optional[str] = Query(
+        default=None
+    ),
+    variables: Optional[str] = Query(
+        default=None
+    ),
 ):
     try:
-        payload = build_engine_payload(
-            region
+        selected_region = (
+            resolve_region(
+                region,
+                cell_id,
+            )
+        )
+
+        selected_variables = (
+            parse_variables(
+                variables
+            )
+        )
+
+        payload = (
+            build_engine_payload(
+                selected_region
+            )
         )
 
         series = []
@@ -82,27 +253,56 @@ def get_series(
         ) in zip(
             payload["years"],
             payload["ndvi_values"],
-            payload["precipitation_values"],
+            payload[
+                "precipitation_values"
+            ],
         ):
-            series.append(
-                {
-                    "year": year,
-                    "ndvi": ndvi,
-                    "precipitation_mm": precipitation,
-                }
-            )
+            point = {
+                "year": year,
+            }
+
+            if (
+                "ndvi"
+                in selected_variables
+            ):
+                point["ndvi"] = (
+                    ndvi
+                )
+
+            if (
+                "precipitation"
+                in selected_variables
+            ):
+                point[
+                    "precipitation_mm"
+                ] = precipitation
+
+            series.append(point)
 
         return {
             "status": "ok",
-            "source": "processed_real_data",
-            "region": region,
-            "cell_id": payload["cell_id"],
-            "period": payload["period"],
-            "total_observations": len(series),
-            "quality": payload["quality"],
-            "metadata": payload["metadata"],
-            "series": series,
+            "source":
+                "processed_real_data",
+            "region":
+                selected_region,
+            "cell_id":
+                payload["cell_id"],
+            "period":
+                payload["period"],
+            "variables":
+                selected_variables,
+            "total_observations":
+                len(series),
+            "quality":
+                payload["quality"],
+            "metadata":
+                payload["metadata"],
+            "series":
+                series,
         }
+
+    except HTTPException:
+        raise
 
     except ValueError as error:
         raise HTTPException(
@@ -126,12 +326,16 @@ def get_series(
 @router.get("/data-status")
 def get_data_status():
     try:
-        regions = get_available_regions()
+        regions = (
+            get_available_regions()
+        )
 
         return {
             "status": "ok",
-            "source": "processed_real_data",
-            "regions_available": len(regions),
+            "source":
+                "processed_real_data",
+            "regions_available":
+                len(regions),
             "regions": regions,
             "engines": [
                 "earth_paradox",
