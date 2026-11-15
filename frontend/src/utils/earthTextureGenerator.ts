@@ -340,6 +340,14 @@ const rawCanvasCache =
     HTMLCanvasElement
   >();
 
+function toLocalGibsProxyUrl(url: string): string {
+  const prefix = 'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/';
+  if (!url.startsWith(prefix)) return url;
+
+  const tilePath = url.slice(prefix.length);
+  return `/api/nasa/gibs-tile?path=${encodeURIComponent(tilePath)}`;
+}
+
 function loadTileImage(
   url: string
 ): Promise<HTMLImageElement | null> {
@@ -372,7 +380,7 @@ function loadTileImage(
           () => {
             finish(null);
           },
-          15000
+          30000
         );
 
       img.onload = () => {
@@ -383,7 +391,7 @@ function loadTileImage(
         finish(null);
       };
 
-      img.src = url;
+      img.src = toLocalGibsProxyUrl(url);
     }
   );
 }

@@ -402,6 +402,104 @@ app.get('/api/nasa/power', async (req, res) => {
   }
 });
 
+// NASA GIBS same-origin tile proxy.
+// Browsers request tiles from this Express server; the server fetches NASA GIBS.
+// This avoids browser-side image/CORS/connection issues while preserving NASA data.
+const GIBS_BASE_URL = 'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/';
+const ALLOWED_GIBS_LAYERS = new Set([
+  'BlueMarble_NextGeneration',
+  'VIIRS_Black_Marble',
+  'VIIRS_SNPP_CorrectedReflectance_TrueColor',
+  'MODIS_Terra_Land_Surface_Temp_Day',
+  'IMERG_Precipitation_Rate',
+  'MODIS_Terra_NDVI_8Day',
+]);
+
+app.get('/api/nasa/gibs-tile', async (req, res) => {
+  const rawPath = typeof req.query.path === 'string' ? req.query.path : '';
+
+  if (!rawPath) {
+    return res.status(400).json({ error: 'missing_gibs_path' });
+  }
+
+  let tilePath: string;
+  try {
+    tilePath = decodeURIComponent(rawPath);
+  } catch {
+    return res.status(400).json({ error: 'invalid_gibs_path' });
+  }
+
+  if (
+    tilePath.startsWith('/') ||
+    tilePath.includes('..') ||
+    tilePath.includes('://') ||
+    tilePath.includes('?') ||
+    tilePath.includes('#')
+  ) {
+    return res.status(400).json({ error: 'invalid_gibs_path' });
+  }
+
+  const parts = tilePath.split('/');
+  if (parts.length !== 7) {
+    return res.status(400).json({ error: 'invalid_gibs_path' });
+  }
+
+  const [layer, style, time, matrixSet, matrix, row, tileFile] = parts;
+
+  if (!ALLOWED_GIBS_LAYERS.has(layer)) {
+    return res.status(400).json({ error: 'unsupported_gibs_layer' });
+  }
+
+  if (
+    style !== 'default' ||
+    !/^(default|\d{4}-\d{2}-\d{2})$/.test(time) ||
+    !/^[A-Za-z0-9_.-]+$/.test(matrixSet) ||
+    !/^\d+$/.test(matrix) ||
+    !/^\d+$/.test(row) ||
+    !/^\d+\.(?:jpg|png)$/.test(tileFile)
+  ) {
+    return res.status(400).json({ error: 'invalid_gibs_tile' });
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const upstream = await fetch(GIBS_BASE_URL + tilePath, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'PiuraWatch-NASA-Observatory/1.0',
+        Accept: 'image/avif,image/webp,image/png,image/jpeg,image/*,*/*',
+      },
+    });
+
+    updateNasaClock(upstream);
+
+    if (!upstream.ok) {
+      return res.status(upstream.status).json({
+        error: 'gibs_upstream_error',
+        status: upstream.status,
+      });
+    }
+
+    const body = Buffer.from(await upstream.arrayBuffer());
+    const contentType = upstream.headers.get('content-type') ??
+      (tileFile.endsWith('.png') ? 'image/png' : 'image/jpeg');
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('X-Data-Source', 'NASA GIBS');
+    return res.send(body);
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return res.status(504).json({ error: 'gibs_timeout' });
+    }
+    return res.status(502).json({ error: 'gibs_unavailable' });
+  } finally {
+    clearTimeout(timer);
+  }
+});
+
 // 4. NASA GIBS WMTS Layer Definitions
 app.get('/api/nasa/gibs-layers', (_req, res) => {
   const refUtc = getReferenceUtcDate();
