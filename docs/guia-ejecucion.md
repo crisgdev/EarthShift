@@ -44,6 +44,8 @@ Los productos y APIs son candidatos técnicos: comprobar documentación, version
 
 **AppEEARS** puede servir para subconjuntos MODIS; **Earthdata CMR** sirve para descubrir colecciones/gránulos. La API no realiza automáticamente la inferencia científica.
 
+> **Nota sobre evapotranspiración:** la 5.ª variable candidata (MODIS `MOD16A2GF.061`) se descartó por pérdida de cobertura en zonas áridas (fill value `32762`). El balance hídrico se captura mediante la combinación de LST, humedad del suelo y NDVI/EVI. Ver [`decisiones-fuentes.md`](decisiones-fuentes.md).
+
 ## 4. Acuerdos científicos y técnicos comunes
 
 - **Piloto técnico inicial:** oeste `−81.3`, sur `−5.8`, este `−80.3`, norte `−4.8`. Es un rectángulo aproximado, **no** el límite administrativo de Piura.
@@ -72,3 +74,9 @@ earthshift/
   docs/                    catálogo, metodología, contrato y demo
   data/                    archivos locales ignorados por Git
 ```
+
+## 6. Decisiones de fuentes y cobertura
+
+- La evapotranspiración MODIS (`MOD16A2GF.061`) fue descartada por pérdida de cobertura en zonas áridas (fill value `32762`). Ver [`decisiones-fuentes.md`](decisiones-fuentes.md).
+- El balance hídrico se captura mediante la combinación de LST (MOD11), humedad del suelo (SMAP/GLDAS) y NDVI/EVI (MOD13Q1).
+- No se interpola ni inventa observaciones; se distingue *sin datos*, *baja calidad* y *ausencia de anomalía*.

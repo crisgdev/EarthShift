@@ -55,8 +55,11 @@ Productos candidatos de la NASA. Hay que comprobar documentación, versiones, li
 | Precipitación | GPM `IMERG` | Revisar producto mensual y periodo de cobertura por versión. |
 | Temperatura superficial | MODIS LST (`MOD11A2`) | **No** equivale a temperatura del aire. |
 | Humedad del suelo | GLDAS / SMAP | Cobertura temporal posterior a MODIS; resolución diferente. |
+| Evapotranspiración (descartada) | MODIS `MOD16A2GF` v061 (Terra) | Descartada: fill value `32762` en zonas áridas/Sechura. Sustituida por LST + humedad del suelo + NDVI/EVI. Ver `docs/decisiones-fuentes.md`. |
 
 Los productos y APIs son candidatos técnicos. **AppEEARS** sirve para subconjuntos MODIS y **Earthdata CMR** para descubrir colecciones/gránulos. La API no realiza automáticamente la inferencia científica.
+
+> **Nota sobre evapotranspiración:** la 5.ª variable candidata (MODIS `MOD16A2GF`) se descartó por pérdida de cobertura en zonas áridas (fill value `32762`). El balance hídrico se captura mediante la combinación de LST, humedad del suelo y NDVI/EVI. Ver [`docs/decisiones-fuentes.md`](docs/decisiones-fuentes.md).
 
 ## Indicadores
 
@@ -140,6 +143,7 @@ Cinco integrantes, trabajo paralelo. Responsabilidad transversal: **todos** prue
 - [x] Definición del reto y planteamiento del proyecto
 - [x] Selección inicial de fuentes y variables (MODIS, GPM IMERG, GLDAS)
 - [x] Limpieza inicial de las cuatro variables (scripts en `backend/processing/`)
+- [x] Decisión documentada: exclusión de ET MODIS (ver `docs/decisiones-fuentes.md`)
 - [ ] Validación de cobertura, QA y procedencia de cada producto
 - [ ] Pipeline de ingesta y armonización sobre cuadrícula común
 - [ ] Implementación de Earth Paradox, Silent Collapse y Decision Reversal
