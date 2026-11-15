@@ -1,0 +1,165 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@theme {
+  --font-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+  --font-mono: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg-canvas: #070A10;
+  --bg-surface: #0E141F;
+  --bg-elevated: #131B29;
+  --border-hairline: #1C2636;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --accent-cyan: #06B6D4;
+  --accent-emerald: #34D399;
+  --accent-amber: #F59E0B;
+  --accent-rose: #FB7185;
+}
+
+@layer base {
+  html,
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-family: Georgia, "Times New Roman", serif;
+  }
+
+  .font-mono,
+  .tabular-nums {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Leaflet Dark Scientific Theme Overrides */
+.leaflet-container {
+  background: #06090F !important;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif !important;
+  color: #F1F5F9;
+}
+
+.leaflet-control-attribution {
+  background: rgba(7, 10, 16, 0.78) !important;
+  color: #64748B !important;
+  border-top-left-radius: 6px;
+  font-size: 10px !important;
+  padding: 2px 6px !important;
+}
+
+.leaflet-control-attribution a {
+  color: #38BDF8 !important;
+}
+
+.leaflet-control-zoom a {
+  background-color: #0E141F !important;
+  color: #E2E8F0 !important;
+  border-color: #1C2636 !important;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: #162032 !important;
+  color: #06B6D4 !important;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #0E141F !important;
+  color: #F1F5F9 !important;
+  border: 1px solid #1E293B !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65) !important;
+  border-radius: 10px !important;
+}
+
+.leaflet-popup-close-button {
+  color: #94A3B8 !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #F1F5F9 !important;
+}
+
+/* Custom Range Slider */
+input[type="range"].sci-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #1C2636;
+  height: 4px;
+  border-radius: 999px;
+  outline: none;
+}
+
+input[type="range"].sci-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #06B6D4;
+  border: 2px solid #070A10;
+  cursor: pointer;
+  transition: transform 150ms ease;
+}
+
+input[type="range"].sci-range::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+/* Subtle custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1C2636;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2C3A50;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Familiar reading rhythm, with editorial headings and quiet numerical labels. */
+@layer base {
+  h1, h2, h3, h4 { letter-spacing: -0.025em; line-height: 1.2; font-weight: 500; }
+  button, input, select, textarea { font-family: var(--font-sans); }
+  button, label { letter-spacing: 0; }
+}
+.brand-wordmark { font-family: Georgia, "Times New Roman", serif; font-size: 1.4rem; letter-spacing: -0.045em; }
+.nature-panel h2 { font-size: 1.8rem; color: #eef2df; }
+.nature-panel p { line-height: 1.7; }
+.nature-panel { border-color: rgba(164, 186, 145, .25); }
+.cesium-widget, .cesium-viewer, .cesium-viewer button { font-family: var(--font-sans); }
