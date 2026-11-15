@@ -2,9 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import (
-    CORSMiddleware,
-)
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.config import (
     APP_NAME,
@@ -12,12 +10,16 @@ from backend.app.config import (
     FRONTEND_ORIGINS,
 )
 
+from backend.app.routes.data import (
+    router as data_router,
+)
+
 from backend.app.routes.findings import (
     router as findings_router,
 )
 
-from backend.app.routes.data import (
-    router as data_router,
+from backend.app.routes.nasa import (
+    router as nasa_router,
 )
 
 
@@ -74,6 +76,11 @@ app.include_router(
 
 app.include_router(
     data_router,
+    prefix="/api",
+)
+
+app.include_router(
+    nasa_router,
     prefix="/api",
 )
 
