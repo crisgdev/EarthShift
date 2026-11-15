@@ -35,3 +35,8 @@ FRONTEND_ORIGINS = [
     ).split(",")
     if origin.strip()
 ]
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+EARTHSHIFT_DEMO_MODE = os.getenv("EARTHSHIFT_DEMO_MODE", "false").lower() == "true"
+EARTHSHIFT_PHENOMENA_AI_ENABLED = os.getenv("EARTHSHIFT_PHENOMENA_AI_ENABLED", "false").lower() == "true"

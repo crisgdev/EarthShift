@@ -22,6 +22,14 @@ from backend.app.routes.nasa import (
     router as nasa_router,
 )
 
+from backend.app.routes.intelligence import (
+    router as intelligence_router,
+)
+
+from backend.app.routes.phenomena import (
+    router as phenomena_router,
+)
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -82,6 +90,14 @@ app.include_router(
 app.include_router(
     nasa_router,
     prefix="/api",
+)
+
+app.include_router(
+    intelligence_router,
+)
+
+app.include_router(
+    phenomena_router,
 )
 
 

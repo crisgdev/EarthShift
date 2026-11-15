@@ -13,7 +13,7 @@ const dictionary = {
   same:['equal to B in matched daily values','igual que B en valores diarios emparejados'],
   cloudNote:['Clouds and orbital effects are illustrative. NASA layers are visual references, not numerical evidence.','Las nubes y efectos orbitales son ilustrativos. Las capas NASA son referencias visuales, no evidencia numérica.'],
   textureFallback:['Illustrative globe: the selected NASA texture could not load.','Globo ilustrativo: no se pudo cargar la textura NASA seleccionada.'],
-  home:['Home','Inicio'], compare:['Compare areas','Comparar áreas'], methods:['Evidence & methods','Evidencia y métodos'], events:['Event records','Registro de eventos'], lab:['Illustrative lab','Laboratorio ilustrativo'],
+  home:['Home','Inicio'], compare:['Compare areas','Comparar áreas'], methods:['Evidence & methods','Evidencia y métodos'], events:['Event records','Registro de eventos'], lab:['EarthShift Intelligence','EarthShift Intelligence'],
   eyebrow:['PIURA, PERU · ENVIRONMENTAL RESEARCH','PIURA, PERÚ · INVESTIGACIÓN AMBIENTAL'], headline:['One planet. Different stories.','Un planeta. Distintas historias.'],
   intro:['Piura Watch helps researchers, communities and local decision makers compare places through environmental data. Start with a question, explore the Earth, then look at the evidence together.','Piura Watch ayuda a investigadores, comunidades y autoridades locales a comparar lugares con datos ambientales. Empieza con una pregunta, explora la Tierra y revisa la evidencia.'],
   start:['Start a comparison','Empezar una comparación'], demo:['Run the real-data case','Ejecutar el caso con datos reales'],
