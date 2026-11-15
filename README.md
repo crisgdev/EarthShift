@@ -1,168 +1,156 @@
 # EarthShift
 
-**Detectando cambios ambientales que pasan desapercibidos.**
+EarthShift es una aplicación para analizar series ambientales multivariables y detectar patrones que requieren revisión.
 
-Plataforma web que integra observaciones históricas y espaciales de la NASA para identificar tendencias cuantificables, anomalías, contradicciones entre indicadores, deterioros lentos y cambios en las conclusiones cuando se incorporan varias variables. Presenta evidencia, incertidumbre y zonas de atención en un mapa interactivo.
+Proyecto desarrollado para NASA Space Apps Challenge 2026.
 
-> 🚧 **Proyecto en construcción** — NASA Space Apps Challenge 2026 · Reto *Be an Earth System Trend Detective!*
-> **Piloto:** Piura, Perú · **Actualización:** 14 de noviembre de 2026
+Piloto actual:
+
+Piura, Perú.
 
 ---
 
-## El problema
+## Arquitectura
 
-Los cambios ambientales no siempre son evidentes. En el **piloto de Piura**, un indicador puede deteriorarse de forma progresiva mientras otros no muestran una variación equivalente.
+EarthShift utiliza el siguiente flujo:
 
-Esa **contradicción entre señales** oculta transformaciones del ecosistema y retrasa la identificación temprana de zonas vulnerables. Analizar cada variable por separado no permite verla; hay que leerlas en conjunto.
+NASA / fuentes ambientales
+→ adquisición
+→ procesamiento
+→ control de calidad
+→ armonización
+→ series temporales
+→ análisis estadístico
+→ motores EarthShift
+→ FastAPI
+→ frontend React
 
-## Pregunta central de investigación
+---
 
-> ¿En qué medida la evolución de los indicadores ambientales en Piura presenta comportamientos inesperados —tendencias, anomalías o contradicciones entre variables— y cómo pueden estos hallazgos contribuir a identificar zonas que requieren atención ambiental preventiva?
+## Fuentes principales
 
-## Propuesta de solución
+### Vegetación
 
-EarthShift convierte los datos históricos del Sistema Tierra en **evidencia comprensible** para responder qué está cambiando, dónde, cuánto y qué decisiones pueden tomarse.
+NASA Terra MODIS
 
-La plataforma se organiza en tres motores de análisis:
+Producto:
 
-| Motor | Pregunta que responde | Qué hace |
-| --- | --- | --- |
-| **Earth Paradox** | ¿Dónde se contradicen los indicadores? | Identifica diferencias o contradicciones relevantes entre indicadores ambientales. Una contradicción no equivale por sí sola a un desastre. |
-| **Silent Collapse** | ¿Dónde se está agotando la capacidad de recuperación? | Busca señales graduales, persistentes y acumulativas de deterioro, con control de estacionalidad y calidad de datos. |
-| **Decision Reversal** | ¿Esto cambia las prioridades? | Compara la conclusión con una sola variable frente a una evaluación multivariable y explica por qué cambia. |
+MOD13Q1.061
 
-**La vegetación es una variable, no el objetivo único.** El alcance se mantiene integral: análisis ambiental multivariable con evidencia, incertidumbre y priorización de zonas.
+Variables:
 
-## Alcance
+- NDVI
+- EVI
+- QA
 
-| Dimensión | Definición |
-| --- | --- |
-| **¿Qué cambia?** | Tendencias, anomalías, contradicciones entre indicadores y señales de deterioro lento en el sistema ambiental. |
-| **¿Dónde?** | **Piloto Piura, Perú**, con arquitectura reutilizable en otras regiones. |
-| **¿Cuánto?** | Magnitud y velocidad del cambio, con significancia estadística y control de calidad (ver [Indicadores](#indicadores)). |
-| **¿Para quién?** | Investigadores y científicos ambientales · autoridades y organismos de gestión ambiental · organizaciones de conservación · comunidades y sectores productivos de la región. |
-| **¿Para qué?** | Detectar tempranamente transformaciones que pasan desapercibidas al analizar cada variable por separado, y aportar evidencia para priorizar zonas de atención y orientar decisiones preventivas. |
+Resolución:
 
-> **Ampliaciones de segundo plano:** análisis especializado de El Niño/La Niña y adaptación metodológica a Marte.
+250 m
 
-## Variables y fuentes de datos
+Resolución temporal:
 
-Productos candidatos de la NASA. Hay que comprobar documentación, versiones, licencias, límites, autenticación, disponibilidad y cobertura antes de usarlos.
+16 días
 
-| Variable | Producto NASA | Observación |
-| --- | --- | --- |
-| Vegetación | `MOD13Q1` v061 (Terra) | NDVI, EVI y QA; compuestos de 16 días; desde 2000. |
-| Precipitación | GPM `IMERG` | Revisar producto mensual y periodo de cobertura por versión. |
-| Temperatura superficial | MODIS LST (`MOD11A2`) | **No** equivale a temperatura del aire. |
-| Humedad del suelo | GLDAS / SMAP | Cobertura temporal posterior a MODIS; resolución diferente. |
-| Evapotranspiración (descartada) | MODIS `MOD16A2GF` v061 (Terra) | Descartada: fill value `32762` en zonas áridas/Sechura. Sustituida por LST + humedad del suelo + NDVI/EVI. Ver `docs/decisiones-fuentes.md`. |
+El repositorio contiene scripts de procesamiento y manifiestos QA que permiten rastrear la procedencia del NDVI utilizado por los motores.
 
-Los productos y APIs son candidatos técnicos. **AppEEARS** sirve para subconjuntos MODIS y **Earthdata CMR** para descubrir colecciones/gránulos. La API no realiza automáticamente la inferencia científica.
+---
 
-> **Nota sobre evapotranspiración:** la 5.ª variable candidata (MODIS `MOD16A2GF`) se descartó por pérdida de cobertura en zonas áridas (fill value `32762`). El balance hídrico se captura mediante la combinación de LST, humedad del suelo y NDVI/EVI. Ver [`docs/decisiones-fuentes.md`](docs/decisiones-fuentes.md).
+### Precipitación
 
-## Indicadores
+NASA GPM IMERG
 
-| Indicador | Qué mide |
-| --- | --- |
-| **Δ NDVI / EVI** | Cambios en la condición y productividad de la vegetación. |
-| **Precipitación acumulada** | Variaciones de las lluvias a lo largo del tiempo. |
-| **Humedad del suelo** | Disponibilidad de agua en el suelo y su tendencia. |
-| **Temperatura superficial** | Condición térmica de la superficie (no temperatura del aire). |
-| **Anomalías ambientales** | Frecuencia e intensidad de eventos fuera de rango. |
-| **Significancia estadística** | Robustez de las tendencias identificadas (p. ej. Mann–Kendall, pendiente de Sen). |
+Producto:
 
-**Periodo de estudio:** 2000–2026, sujeto a la disponibilidad y compatibilidad de cada producto.
+GPM_3IMERGM
 
-## Acuerdos científicos y técnicos
+Versión:
 
-- **Área piloto:** oeste `−81.3`, sur `−5.8`, este `−80.3`, norte `−4.8`. Es un rectángulo aproximado, **no** el límite administrativo de Piura.
-- **GeoJSON:** `EPSG:4326` con orden `[longitud, latitud]`. Si una interfaz pide `latitud, longitud`, invertir el orden explícitamente.
-- **Trazabilidad:** conservar los originales sin alterar y registrar producto, versión, fecha, unidades, escala, QA, resolución, fuente y fecha de adquisición.
-- **Comparabilidad:** trabajo sobre una cuadrícula común y agregación mensual; conservar los datos originales y documentar remuestreo y cobertura.
-- **Sin invención de datos:** no interpolar ni inventar observaciones silenciosamente. Distinguir *sin datos*, *baja calidad* y *ausencia de anomalía*.
-- **Alertas:** significan prioridad de revisión basada en evidencia; no son predicción comprobada de desastre ni causalidad.
+07
 
-## Metodología
+Variable:
 
-```
-NASA APIs → ingesta → originales/metadatos → limpieza y armonización →
-series por celda → estadística → tres motores → FastAPI → React/Leaflet y gráficos
-```
+precipitación
 
-1. **Definición de áreas de estudio** — zonas comparables y estables dentro del área piloto.
-2. **Ingesta y armonización** — descarga, recorte espacial y alineación temporal de las series.
-3. **Control de calidad** — enmascarado según QA, tratamiento de huecos y normalización de anomalías.
-4. **Análisis de tendencias** — regresión estacional, Mann–Kendall, pendiente de Sen.
-5. **Detección de contradicciones** — correlación y desacople entre indicadores (Earth Paradox).
-6. **Resiliencia** — memoria temporal / autocorrelación y recuperación tras anomalías (Silent Collapse).
-7. **Priorización** — ranking de zonas e interpretación para decisiones preventivas (Decision Reversal).
+El repositorio contiene scripts de descarga y procesamiento asociados a la serie utilizada.
 
-> Las conclusiones dependen de los resultados con datos reales. El proyecto no asume de antemano que exista una contradicción: la busca y la mide.
+La precipitación corresponde actualmente a una serie regional general de Piura.
 
-## Arquitectura y estructura del repositorio
+Por ello:
 
-```
-EarthShift/
-├── README.md
-├── frontend/                # React + Vite
-├── backend/
-│   ├── app/                 # FastAPI, rutas y esquemas
-│   ├── connectors/          # clientes NASA
-│   ├── processing/          # limpieza, QA y armonización
-│   ├── analysis/            # tendencias y anomalías
-│   └── engines/             # tres motores y reglas de alerta
-├── tests/                   # pruebas por módulo
-├── docs/                    # catálogo, metodología, contrato de API y demo
-└── data/                    # archivos locales (ignorados por Git)
-```
+spatial_match = approximate
 
-## Equipo y roles
+No debe interpretarse como una observación exacta de cada zona MODIS.
 
-Cinco integrantes, trabajo paralelo. Responsabilidad transversal: **todos** prueban su módulo, documentan decisiones y participan en la demo.
+---
 
-| # | Área | Responsabilidad principal |
-| --- | --- | --- |
-| 1 | Web — frontend | React/Vite, UX, mapa, gráficos, vistas de los tres motores, filtros y detalle de hallazgos. |
-| 2 | Web — backend/API | FastAPI, endpoints, integración frontend, caché/consultas, validación y rendimiento. Coordina el contrato de API. |
-| 3 | Datos NASA | Inventario de productos, autenticación, descarga por API y procedencia de fuentes. |
-| 4 | Procesamiento y estadística | QA, escalas, espacio/tiempo, tendencias, significancia, anomalías y calidad. |
-| 5 | Motores EarthShift | Earth Paradox, Silent Collapse, Decision Reversal, reglas de alerta y validación científica. Coordina la definición de hallazgos. |
+## APIs NASA auxiliares
 
-### Colaboradores
+EarthShift también dispone de conectores reales y verificados para:
 
-| GitHub |
-| --- |
-| [@crisgdev](https://github.com/crisgdev) |
-| [@tellosaldanalaly772-stack](https://github.com/tellosaldanalaly772-stack) |
-| [@adrianatrujillo-tech](https://github.com/adrianatrujillo-tech) |
-| [@Talkify-arh](https://github.com/Talkify-arh) |
+NASA POWER
 
-## Estado del desarrollo
+NASA EONET
 
-- [x] Definición del reto y planteamiento del proyecto
-- [x] Selección inicial de fuentes y variables (MODIS, GPM IMERG, GLDAS)
-- [x] Limpieza inicial de las cuatro variables (scripts en `backend/processing/`)
-- [x] Decisión documentada: exclusión de ET MODIS (ver `docs/decisiones-fuentes.md`)
-- [ ] Validación de cobertura, QA y procedencia de cada producto
-- [ ] Pipeline de ingesta y armonización sobre cuadrícula común
-- [ ] Implementación de Earth Paradox, Silent Collapse y Decision Reversal
-- [ ] API FastAPI e integración con el frontend
-- [ ] Interfaz web y visualizaciones
-- [ ] Validación de resultados y documentación final
+Endpoints:
 
-## Cómo contribuir
+/api/nasa/power
 
-1. Crea una rama desde `main`: `git switch -c feat/mi-aporte`.
-2. Haz commits descriptivos (ver [Conventional Commits](https://www.conventionalcommits.org/es/)).
-3. Abre un Pull Request hacia `main` y solicita revisión.
+/api/nasa/eonet
 
-> Los datos locales (`data/`) y las descargas crudas de NASA **no** se versionan. Para compartir un CSV limpio con el equipo, usa un almacenamiento externo o agrégalo de forma explícita con `git add -f`.
+Catálogo NASA:
 
-## Documentación
+/api/nasa/catalog
 
-- [Guía de ejecución para cinco integrantes](docs/guia-ejecucion.md) — alcance, responsabilidades, fuentes y acuerdos del equipo.
+---
 
-## Créditos
+## Motores EarthShift
 
-Datos e inspiración: **NASA Earth Science Data Systems** · Reto *Be an Earth System Trend Detective!* de **NASA Space Apps Challenge 2026**.
+### Earth Paradox
+
+Busca divergencias entre variables ambientales.
+
+No demuestra causalidad.
+
+### Silent Collapse
+
+Analiza:
+
+- tendencia
+- persistencia
+- cambio acumulado
+- ventanas temporales
+- anomalías
+- déficit acumulado
+
+### Decision Reversal
+
+Compara una clasificación univariable contra una evaluación multivariable.
+
+---
+
+## Niveles
+
+Los motores utilizan:
+
+normal
+
+observar
+
+investigar
+
+sin datos
+
+normal significa que las reglas actuales no activaron una señal.
+
+No significa que el ecosistema esté necesariamente sano.
+
+sin datos nunca debe convertirse automáticamente en normal.
+
+---
+
+## Backend
+
+Desde la raíz del proyecto:
+
+```bash
+py -m pip install -r requirements.txt
