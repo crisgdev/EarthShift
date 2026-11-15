@@ -3,3 +3,4 @@ uvicorn
 pandas
 scipy
 httpx
+pytest

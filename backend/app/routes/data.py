@@ -13,11 +13,6 @@ router = APIRouter(
 
 @router.get("/variables")
 def get_variables():
-    """
-    Variables disponibles actualmente
-    para los motores EarthShift.
-    """
-
     return {
         "status": "ok",
         "variables": [
@@ -39,17 +34,40 @@ def get_variables():
     }
 
 
+@router.get("/cells")
+def get_cells():
+    try:
+        regions = get_available_regions()
+
+        cells = [
+            {
+                "cell_id": region,
+                "region": region,
+                "source": "MODIS_zonal_processed",
+                "status": "available",
+            }
+            for region in regions
+        ]
+
+        return {
+            "status": "ok",
+            "total": len(cells),
+            "cells": cells,
+        }
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=str(error),
+        )
+
+
 @router.get("/series")
 def get_series(
     region: str = Query(
         default="BajoPiura"
     )
 ):
-    """
-    Devuelve las series anuales usadas
-    por los motores EarthShift.
-    """
-
     try:
         payload = build_engine_payload(
             region
@@ -78,16 +96,11 @@ def get_series(
             "status": "ok",
             "source": "processed_real_data",
             "region": region,
+            "cell_id": payload["cell_id"],
             "period": payload["period"],
-            "total_observations": len(
-                series
-            ),
-            "quality": payload[
-                "quality"
-            ],
-            "metadata": payload[
-                "metadata"
-            ],
+            "total_observations": len(series),
+            "quality": payload["quality"],
+            "metadata": payload["metadata"],
             "series": series,
         }
 
@@ -112,26 +125,26 @@ def get_series(
 
 @router.get("/data-status")
 def get_data_status():
-    """
-    Resumen rapido de disponibilidad.
-    """
-
     try:
-        regions = (
-            get_available_regions()
-        )
+        regions = get_available_regions()
 
         return {
             "status": "ok",
-            "source":
-                "processed_real_data",
-            "regions_available":
-                len(regions),
+            "source": "processed_real_data",
+            "regions_available": len(regions),
             "regions": regions,
             "engines": [
                 "earth_paradox",
                 "silent_collapse",
                 "decision_reversal",
+            ],
+            "endpoints": [
+                "/api/variables",
+                "/api/regions",
+                "/api/cells",
+                "/api/series",
+                "/api/findings",
+                "/api/findings/{finding_id}",
             ],
         }
 

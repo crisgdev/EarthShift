@@ -29,10 +29,23 @@ def clean_real_output(value):
         cleaned = {}
 
         for key, item in value.items():
+
             if key == "demo":
                 cleaned[key] = False
-            else:
-                cleaned[key] = clean_real_output(item)
+                continue
+
+            if (
+                key == "reference_type"
+                and item == "demo_fixed_reference"
+            ):
+                cleaned[key] = (
+                    "mean_available_ndvi_provisional"
+                )
+                continue
+
+            cleaned[key] = clean_real_output(
+                item
+            )
 
         return cleaned
 
@@ -53,6 +66,9 @@ def clean_real_output(value):
                 and item in blocked_texts
             )
         ]
+
+    if value == "demo_fixed_reference":
+        return "mean_available_ndvi_provisional"
 
     return value
 
@@ -148,22 +164,15 @@ def get_findings(
 
         return {
             "status": "ok",
-            "source":
-                "processed_real_data",
+            "source": "processed_real_data",
             "demo": False,
             "region": region,
-            "cell_id":
-                data["cell_id"],
-            "period":
-                data["period"],
-            "total_findings":
-                len(findings),
-            "quality":
-                data["quality"],
-            "metadata":
-                data["metadata"],
-            "findings":
-                findings,
+            "cell_id": data["cell_id"],
+            "period": data["period"],
+            "total_findings": len(findings),
+            "quality": data["quality"],
+            "metadata": data["metadata"],
+            "findings": findings,
         }
 
     except ValueError as error:
@@ -212,20 +221,15 @@ def get_finding_by_id(
         if finding is None:
             raise HTTPException(
                 status_code=404,
-                detail=(
-                    "Finding no encontrado."
-                ),
+                detail="Finding no encontrado.",
             )
 
         return {
             "status": "ok",
-            "source":
-                "processed_real_data",
+            "source": "processed_real_data",
             "region": region,
-            "period":
-                data["period"],
-            "finding":
-                finding,
+            "period": data["period"],
+            "finding": finding,
         }
 
     except HTTPException:
@@ -253,13 +257,23 @@ def get_payload(
     try:
         return {
             "status": "ok",
-            "source":
-                "processed_real_data",
-            "payload":
-                build_engine_payload(
-                    region
-                ),
+            "source": "processed_real_data",
+            "payload": build_engine_payload(
+                region
+            ),
         }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
+
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        )
 
     except Exception as error:
         raise HTTPException(
