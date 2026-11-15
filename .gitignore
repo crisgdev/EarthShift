@@ -2,9 +2,9 @@
 # EarthShift — archivos que NO se versionan
 # ---------------------------------------------------------------------------
 
-# Datos locales (originales, intermedios y limpios). Ver docs/guia-ejecucion.md
-data/
+# Datos locales: los CSV limpios de data/ se versionan para compartirlos con el equipo
 *.csv
+!/data/*.csv
 
 # Descargas crudas de NASA (AppEEARS / GES DISC)
 Piura-Variables-*.csv
