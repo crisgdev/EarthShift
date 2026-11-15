@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #080d14;
+  --panel: #0f1822;
+  --border: #1e2a36;
+  --text: #F2F5F7;
+  --muted: #8a9aaa;
+  --green: #64C58A;
+  --blue: #69A9D8;
+  --pink: #e879f9;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: Manrope, system-ui, -apple-system, sans-serif;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.leaflet-container {
+  background: #0a121c;
+  font: inherit;
+}
+
+::-webkit-scrollbar { height: 8px; width: 8px; }
+::-webkit-scrollbar-thumb { background: #1e2a36; border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.recharts-text { fill: #8a9aaa; }
+
+.glass {
+  background: linear-gradient(180deg, rgba(21, 32, 42, 0.92) 0%, rgba(15, 24, 34, 0.95) 100%);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(30, 42, 54, 0.9);
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.4);
+  border-radius: 1rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #e879f9 0%, #c084fc 100%);
+  color: white;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  transition: all 0.2s ease;
+}
+.btn-primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(232, 121, 249, 0.3);
+}
+
+.btn-ghost {
+  border: 1px solid rgba(100, 197, 138, 0.5);
+  color: #64C58A;
+  transition: all 0.2s ease;
+}
+.btn-ghost:hover {
+  background: #64C58A;
+  color: #04120b;
+}
+
+.earth-glow {
+  box-shadow:
+    0 0 70px rgba(105, 169, 216, 0.28),
+    0 0 140px rgba(100, 197, 138, 0.1),
+    inset -50px -40px 80px rgba(0, 0, 0, 0.75);
+}
+
+.card-lift {
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+}
