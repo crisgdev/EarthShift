@@ -1,3 +1,14 @@
+# Piura Watch — research prototype
+
+The primary application now supports evidence-based A/B center-cell comparisons, English/Spanish, NASA POWER daily data, source metadata and exports. Start with `npm install` and `npm run dev`, then open http://localhost:3000.
+
+See [implementation audit](docs/IMPLEMENTATION-AUDIT.md) for the scientific scope and [delivery notes](docs/DELIVERY.md) for changed files, checks, commands and the jury demonstration. The reproducible real NASA case is in [public/cases/piura-2023.json](public/cases/piura-2023.json).
+
+Numerical NDVI, soil moisture and LST processing remain unavailable. Legacy hardcoded indicators are illustrative, not validated risk measurements. Existing source components are retained.
+
+---
+
+## Original setup notes
 # Piura Watch — Observatorio Climático y Satelital NASA (Piura, Perú)
 
 Aplicación web full-stack en tiempo real enfocada en las 6 subcuencas de **Piura** y conectada directamente con APIs oficiales de la **NASA**:
