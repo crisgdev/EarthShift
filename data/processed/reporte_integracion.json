@@ -1,0 +1,46 @@
+{
+    "periodo": {
+        "inicio": "2000-03-01",
+        "fin": "2025-09-01"
+    },
+    "serie_general": {
+        "filas": 307,
+        "precipitacion_disponible": 307,
+        "humedad_disponible": 307
+    },
+    "modis_zonal": {
+        "estricto": {
+            "filas": 1222,
+            "zonas": [
+                "BajoPiura",
+                "BosqueSecoMorropon",
+                "DesiertoSechura",
+                "ValleChira"
+            ],
+            "fechas": 307,
+            "ndvi_disponibles": 725,
+            "evi_disponibles": 725,
+            "temperatura_disponible": 1219
+        },
+        "ampliado": {
+            "filas": 1223,
+            "zonas": [
+                "BajoPiura",
+                "BosqueSecoMorropon",
+                "DesiertoSechura",
+                "ValleChira"
+            ],
+            "fechas": 307,
+            "ndvi_disponibles": 835,
+            "evi_disponibles": 835,
+            "temperatura_disponible": 1219
+        }
+    },
+    "zonas_esperadas": [
+        "BajoPiura",
+        "BosqueSecoMorropon",
+        "DesiertoSechura",
+        "ValleChira"
+    ],
+    "advertencia": "La serie general y las cuatro zonas MODIS se mantienen separadas."
+}

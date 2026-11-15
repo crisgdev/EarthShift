@@ -1,0 +1,64 @@
+{
+  "producto": "MODIS MOD13Q1.061",
+  "variable": "NDVI y EVI",
+  "frecuencia_original": "16 días",
+  "agregacion": "Media mensual de composiciones disponibles",
+  "escenarios": {
+    "estricto": {
+      "escenario": "estricto",
+      "registros_originales": 2456,
+      "registros_seleccionados": 1075,
+      "registros_excluidos": 1381,
+      "zonas": {
+        "BajoPiura": {
+          "registros_originales": 614,
+          "registros_seleccionados": 432
+        },
+        "BosqueSecoMorropon": {
+          "registros_originales": 614,
+          "registros_seleccionados": 214
+        },
+        "DesiertoSechura": {
+          "registros_originales": 614,
+          "registros_seleccionados": 255
+        },
+        "ValleChira": {
+          "registros_originales": 614,
+          "registros_seleccionados": 174
+        }
+      },
+      "periodo_inicio": "2000-02-18",
+      "periodo_fin": "2026-10-16",
+      "archivo_salida": "data\\processed\\modis_vegetacion_mensual_estricto.csv"
+    },
+    "ampliado": {
+      "escenario": "ampliado",
+      "registros_originales": 2456,
+      "registros_seleccionados": 1266,
+      "registros_excluidos": 1190,
+      "zonas": {
+        "BajoPiura": {
+          "registros_originales": 614,
+          "registros_seleccionados": 449
+        },
+        "BosqueSecoMorropon": {
+          "registros_originales": 614,
+          "registros_seleccionados": 224
+        },
+        "DesiertoSechura": {
+          "registros_originales": 614,
+          "registros_seleccionados": 283
+        },
+        "ValleChira": {
+          "registros_originales": 614,
+          "registros_seleccionados": 310
+        }
+      },
+      "periodo_inicio": "2000-02-18",
+      "periodo_fin": "2026-10-16",
+      "archivo_salida": "data\\processed\\modis_vegetacion_mensual_ampliado.csv"
+    }
+  },
+  "diferencia_ampliado_vs_estricto": 191,
+  "observaciones_marginales_adicionales": 191
+}

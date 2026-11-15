@@ -5,6 +5,11 @@
 # Datos locales: los CSV limpios de data/ se versionan para compartirlos con el equipo
 *.csv
 !/data/*.csv
+# Resultados procesados de EarthShift
+!/data/processed/
+!/data/processed/*.csv
+!/data/processed/*.json
+!/data/processed/*.txt
 
 # Descargas crudas de NASA (AppEEARS / GES DISC)
 Piura-Variables-*.csv
@@ -31,6 +36,9 @@ venv/
 env/
 ENV/
 .conda/
+
+# Credenciales locales de NASA
+.dodsrc
 
 # Python
 __pycache__/

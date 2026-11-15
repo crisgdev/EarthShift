@@ -1,0 +1,102 @@
+{
+  "proyecto": "EarthShift",
+  "responsabilidad": "Persona 4 - Procesamiento y estad?stica",
+  "fecha_auditoria": "2026-11-15T10:27:29",
+  "periodo_estudio": "2000-03 a 2025-09",
+  "archivos": {
+    "earthshift_general_mensual.csv": {
+      "existe": true,
+      "tamano_bytes": 15620
+    },
+    "earthshift_modis_zonal_estricto.csv": {
+      "existe": true,
+      "tamano_bytes": 91998
+    },
+    "earthshift_modis_zonal_ampliado.csv": {
+      "existe": true,
+      "tamano_bytes": 95192
+    },
+    "estadisticas.csv": {
+      "existe": true,
+      "tamano_bytes": 5993
+    },
+    "anomalias.csv": {
+      "existe": true,
+      "tamano_bytes": 658762
+    },
+    "correlaciones.csv": {
+      "existe": true,
+      "tamano_bytes": 2551
+    },
+    "correlaciones_anomalias.csv": {
+      "existe": true,
+      "tamano_bytes": 2134
+    },
+    "autocorrelacion_lag1.csv": {
+      "existe": true,
+      "tamano_bytes": 1612
+    },
+    "correlaciones_anomalias_autocorrelacion.csv": {
+      "existe": true,
+      "tamano_bytes": 3579
+    },
+    "reporte_integracion.json": {
+      "existe": true,
+      "tamano_bytes": 1248
+    },
+    "reporte_qa_estadistico.json": {
+      "existe": true,
+      "tamano_bytes": 4409
+    },
+    "metadata_vegetacion_zonas.json": {
+      "existe": true,
+      "tamano_bytes": 382
+    }
+  },
+  "validaciones": {
+    "general_filas": 307,
+    "general_fechas": 307,
+    "general_duplicados": 0,
+    "general_periodo": [
+      "2000-03",
+      "2025-09"
+    ],
+    "zonas_estricto": [
+      "BajoPiura",
+      "BosqueSecoMorropon",
+      "DesiertoSechura",
+      "ValleChira"
+    ],
+    "zonas_ampliado": [
+      "BajoPiura",
+      "BosqueSecoMorropon",
+      "DesiertoSechura",
+      "ValleChira"
+    ],
+    "zonas_esperadas_presentes_estricto": true,
+    "zonas_esperadas_presentes_ampliado": true,
+    "duplicados_modis_estricto": 0,
+    "duplicados_modis_ampliado": 0,
+    "filas_modis_estricto": 1222,
+    "filas_modis_ampliado": 1223
+  },
+  "observaciones": [
+    "GPM y GLDAS representan una serie general de Piura; MODIS conserva cuatro zonas.",
+    "El escenario estricto es el principal; el ampliado es un an?lisis de sensibilidad.",
+    "No se deben interpolar meses faltantes ni reemplazarlos por cero.",
+    "La autocorrelaci?n lag 1 se calcul? sobre observaciones de meses consecutivos.",
+    "El ajuste por tama?o de muestra efectivo es exploratorio y no constituye una correcci?n inferencial definitiva.",
+    "Las tendencias y correlaciones deben interpretarse considerando estacionalidad, autocorrelaci?n y cobertura desigual.",
+    "La serie general de vegetaci?n no equivale a una media ponderada por superficie."
+  ],
+  "controles": {
+    "archivos_principales_presentes": true,
+    "periodo_general_307_meses": true,
+    "sin_duplicados_general": true,
+    "zonas_estricto_correctas": true,
+    "zonas_ampliado_correctas": true,
+    "sin_duplicados_estricto": true,
+    "sin_duplicados_ampliado": true
+  },
+  "resultado_auditoria": "APTO PARA TRANSFERENCIA"
+}

@@ -1,0 +1,36 @@
+EARTHSHIFT - ENTREGA PERSONA 4
+Procesamiento y estad?stica
+Periodo: marzo 2000 - septiembre 2025
+
+ARCHIVOS PRINCIPALES
+- earthshift_general_mensual.csv
+- earthshift_modis_zonal_estricto.csv
+- earthshift_modis_zonal_ampliado.csv
+- estadisticas.csv
+- anomalias.csv
+- correlaciones.csv
+- correlaciones_anomalias.csv
+- autocorrelacion_lag1.csv
+- correlaciones_anomalias_autocorrelacion.csv
+- reporte_integracion.json
+- reporte_qa_estadistico.json
+- reporte_entrega_persona4.json
+- ../metadata/metadata_vegetacion_zonas.json
+
+REGLAS DE INTEGRACION
+1. GPM y GLDAS son series generales de Piura.
+2. MODIS conserva cuatro zonas: BajoPiura, BosqueSecoMorropon,
+   DesiertoSechura y ValleChira.
+3. No duplicar las series generales en las zonas MODIS.
+4. Estricto es el escenario principal; ampliado es sensibilidad.
+5. No interpolar meses faltantes ni sustituirlos por cero.
+
+LIMITACIONES
+Las pruebas de tendencias y correlaciones son exploratorias.
+El ajuste por tama?o de muestra efectivo frente a autocorrelacion
+es una aproximacion de sensibilidad, no una correccion inferencial
+definitiva. No interpretar asociaciones como causalidad.
+La media general de vegetacion no es ponderada por superficie.
+
+Los archivos originales y los scripts de procesamiento deben
+conservarse junto con esta entrega.

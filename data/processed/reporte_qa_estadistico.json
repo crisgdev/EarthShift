@@ -1,0 +1,155 @@
+{
+    "general": {
+        "filas": 307,
+        "variables": {
+            "precipitacion_mm": {
+                "disponibles": 307,
+                "faltantes": 0
+            },
+            "humedad_suelo": {
+                "disponibles": 307,
+                "faltantes": 0
+            }
+        }
+    },
+    "estricto": {
+        "BajoPiura": {
+            "filas": 303,
+            "variables": {
+                "temperatura_superficial_c": {
+                    "disponibles": 302,
+                    "faltantes": 1
+                },
+                "ndvi": {
+                    "disponibles": 257,
+                    "faltantes": 46
+                },
+                "evi": {
+                    "disponibles": 257,
+                    "faltantes": 46
+                }
+            }
+        },
+        "BosqueSecoMorropon": {
+            "filas": 305,
+            "variables": {
+                "temperatura_superficial_c": {
+                    "disponibles": 304,
+                    "faltantes": 1
+                },
+                "ndvi": {
+                    "disponibles": 153,
+                    "faltantes": 152
+                },
+                "evi": {
+                    "disponibles": 153,
+                    "faltantes": 152
+                }
+            }
+        },
+        "DesiertoSechura": {
+            "filas": 307,
+            "variables": {
+                "temperatura_superficial_c": {
+                    "disponibles": 307,
+                    "faltantes": 0
+                },
+                "ndvi": {
+                    "disponibles": 188,
+                    "faltantes": 119
+                },
+                "evi": {
+                    "disponibles": 188,
+                    "faltantes": 119
+                }
+            }
+        },
+        "ValleChira": {
+            "filas": 307,
+            "variables": {
+                "temperatura_superficial_c": {
+                    "disponibles": 306,
+                    "faltantes": 1
+                },
+                "ndvi": {
+                    "disponibles": 127,
+                    "faltantes": 180
+                },
+                "evi": {
+                    "disponibles": 127,
+                    "faltantes": 180
+                }
+            }
+        }
+    },
+    "ampliado": {
+        "BajoPiura": {
+            "filas": 304,
+            "variables": {
+                "temperatura_superficial_c": {
+                    "disponibles": 302,
+                    "faltantes": 2
+                },
+                "ndvi": {
+                    "disponibles": 265,
+                    "faltantes": 39
+                },
+                "evi": {
+                    "disponibles": 265,
+                    "faltantes": 39
+                }
+            }
+        },
+        "BosqueSecoMorropon": {
+            "filas": 305,
+            "variables": {
+                "temperatura_superficial_c": {
+                    "disponibles": 304,
+                    "faltantes": 1
+                },
+                "ndvi": {
+                    "disponibles": 160,
+                    "faltantes": 145
+                },
+                "evi": {
+                    "disponibles": 160,
+                    "faltantes": 145
+                }
+            }
+        },
+        "DesiertoSechura": {
+            "filas": 307,
+            "variables": {
+                "temperatura_superficial_c": {
+                    "disponibles": 307,
+                    "faltantes": 0
+                },
+                "ndvi": {
+                    "disponibles": 202,
+                    "faltantes": 105
+                },
+                "evi": {
+                    "disponibles": 202,
+                    "faltantes": 105
+                }
+            }
+        },
+        "ValleChira": {
+            "filas": 307,
+            "variables": {
+                "temperatura_superficial_c": {
+                    "disponibles": 306,
+                    "faltantes": 1
+                },
+                "ndvi": {
+                    "disponibles": 208,
+                    "faltantes": 99
+                },
+                "evi": {
+                    "disponibles": 208,
+                    "faltantes": 99
+                }
+            }
+        }
+    }
+}
