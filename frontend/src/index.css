@@ -163,3 +163,18 @@ input[type="range"].sci-range::-webkit-slider-thumb:hover {
 .nature-panel p { line-height: 1.7; }
 .nature-panel { border-color: rgba(164, 186, 145, .25); }
 .cesium-widget, .cesium-viewer, .cesium-viewer button { font-family: var(--font-sans); }
+
+/* Globe controls have their own sizing, independent of page button defaults. */
+.earth-dock { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); z-index:20; width:calc(100% - 24px); max-width:480px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+.earth-dock-panel { width:100%; padding:8px; border:1px solid #ffffff20; border-radius:20px; background:rgba(7,18,29,.96); box-shadow:0 12px 36px #0007; }
+.earth-dock-layers { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; padding-bottom:8px; border-bottom:1px solid #ffffff12; }
+.earth-dock .earth-dock-panel button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:40px; padding:7px 10px; border:1px solid transparent; border-radius:12px; background:transparent; color:#b8cad6; font-size:12px; font-weight:500; line-height:1.3; cursor:pointer; transition:background .18s,color .18s; }
+.earth-dock .earth-dock-panel button:hover { color:#f0faff; background:#ffffff0d; }
+.earth-dock .earth-dock-panel button[aria-pressed="true"] { background:#183c49; color:#c2f5ed; border-color:#77d9cc38; }
+.earth-dock .earth-dock-panel button:focus-visible { outline:2px solid #99eadd; outline-offset:2px; }
+.earth-dock-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px; padding-top:8px; }
+.earth-dock-zoom { display:flex; border:1px solid #ffffff12; border-radius:12px; }
+.earth-dock .earth-dock-zoom button { width:38px; padding:0; }
+.earth-dock .earth-dock-panel .earth-dock-explore { background:#b1e8d4; color:#0c2927; font-weight:650; }
+.earth-dock .earth-dock-panel .earth-dock-explore:hover { background:#c8f5e5; color:#0c2927; }
+@media(max-width:420px) { .earth-dock-layers { grid-template-columns:repeat(2,minmax(0,1fr)); } .earth-dock .earth-dock-panel button { padding:6px 8px; } .earth-dock-actions { gap:2px; } .earth-dock .earth-dock-zoom button { width:32px; } }

@@ -1,18 +1,18 @@
+import { useLanguage, type Key } from '../research/i18n';
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import {
-  Cloud,
   Compass,
-  Flame,
   Loader2,
   MapPin,
+  Minus,
+  Plus,
   Pause,
   Play,
   RotateCcw,
   Satellite,
-  Sun,
 } from 'lucide-react';
 import type { GeoCoordinates, NasaEonetEvent, PiuraStation } from '../types/climate';
 import {
@@ -47,7 +47,6 @@ const SKIN_OPTIONS: Array<{
   label: string;
   legend?: { title: string; gradient: string[]; labels: string[] };
 }> = [
-  { id: 'bluemarble', label: 'Natural' },
   { id: 'viirs', label: 'Satélite' },
   {
     id: 'lst',
@@ -76,7 +75,6 @@ const SKIN_OPTIONS: Array<{
       labels: ['0.0 Árido', '0.2', '0.5', '0.7', '0.9'],
     },
   },
-  { id: 'night', label: 'Noche' },
 ];
 
 function latLonToVector3(
@@ -167,13 +165,17 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
   minimal = false,
   fullBleed = false,
 }) => {
+  const { t, language } = useLanguage();
+  const skinLabels: Record<string, Key> = {bluemarble:'globeNatural',viirs:'globeSatellite',lst:'globeHeat',imerg:'globeRain',ndvi:'ndvi',night:'globeNight'};
+  const reducedMotion = useRef(matchMedia('(prefers-reduced-motion: reduce)').matches);
   const mountRef = useRef<HTMLDivElement | null>(null);
-  const [skinMode, setSkinMode] = useState<EarthSkinMode>('bluemarble');
+  const [skinMode, setSkinMode] = useState<EarthSkinMode>('viirs');
   const [skinLoading, setSkinLoading] = useState(false);
+  const [skinUnavailable, setSkinUnavailable] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
-  const [showClouds, setShowClouds] = useState(true);
-  const [showEonet, setShowEonet] = useState(true);
-  const [sunAngleDeg, setSunAngleDeg] = useState(38);
+  const [showClouds] = useState(true);
+  const [showEonet] = useState(true);
+  const [sunAngleDeg] = useState(38);
   const [webglError, setWebglError] = useState<string | null>(null);
   const [hoverInfo, setHoverInfo] = useState<{
     x: number;
@@ -227,6 +229,8 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
 
   const sceneHandlesRef = useRef<{
     focusLatLon: (lat: number, lon: number, distance?: number) => void;
+    zoom: (factor: number) => void;
+    rotate: (direction: number) => void;
     updatePinMarker: (lat: number, lon: number) => void;
     rebuildEonetMarkers: (events: NasaEonetEvent[], selectedId: string | null) => void;
     rebuildStationMarkers: (stationsList: PiuraStation[]) => void;
@@ -600,7 +604,7 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
           kind: 'eonet',
           event: ev,
           title: ev.title,
-          subtitle: `NASA EONET · ${translateEonetCategory(ev.categoryId, ev.categoryTitle)}`,
+          subtitle: `NASA EONET · ${ev.categoryId}`,
         };
         eonetGroup.add(mesh);
         clickableMeshes.push(mesh);
@@ -637,7 +641,7 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
       latLonToVector3(lat, lon, 1, _tmpVec);
       _tmpVec.applyEuler(earthGroup.rotation).normalize().multiplyScalar(distance);
       glideTargetCamPos.copy(_tmpVec);
-      glideActive = true;
+      if (reducedMotion.current) { camera.position.copy(glideTargetCamPos); controls.update(); glideActive = false; } else { glideActive = true; }
     };
 
     controls.addEventListener('start', () => {
@@ -648,6 +652,7 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
 
     const applyEarthSkin = async (mode: EarthSkinMode, dateStr: string) => {
       setSkinLoading(true);
+      setSkinUnavailable(false);
       try {
         const [skinTex, nightTex] = await Promise.all([
           loadNasaGibsEarthTexture(mode, dateStr, maxAnisotropy),
@@ -658,6 +663,7 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
 
         if (disposed) return;
 
+        setSkinUnavailable(!skinTex);
         if (skinTex) {
           earthMat.map = skinTex;
           if (mode === 'night') {
@@ -675,6 +681,8 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
           earthMat.needsUpdate = true;
           callbacksRef.current.onTexturesReady?.();
         }
+      } catch {
+        if (!disposed) setSkinUnavailable(true);
       } finally {
         if (!disposed) setSkinLoading(false);
       }
@@ -682,6 +690,8 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
 
     sceneHandlesRef.current = {
       focusLatLon,
+      zoom: (factor: number) => {glideActive=false; camera.position.setLength(THREE.MathUtils.clamp(camera.position.length()*factor, controls.minDistance, controls.maxDistance));controls.update();},
+      rotate: (direction: number) => {glideActive=false;camera.position.applyAxisAngle(_upVec,direction*0.2);controls.update();},
       updatePinMarker,
       rebuildEonetMarkers,
       rebuildStationMarkers,
@@ -842,9 +852,9 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
     function tick() {
       if (disposed) return;
       const dt = Math.min(clock.getDelta(), 0.1);
-      const elapsed = clock.getElapsedTime();
+      const elapsed = reducedMotion.current ? 0 : clock.getElapsedTime();
 
-      if (autoRotateRef.current && !glideActive) {
+      if (autoRotateRef.current && !glideActive && !reducedMotion.current) {
         earthGroup.rotation.y += dt * 0.08;
       }
 
@@ -858,7 +868,7 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
       );
 
       cloudMesh.visible = showCloudsRef.current && skinModeRef.current !== 'viirs';
-      if (cloudMesh.visible) {
+      if (cloudMesh.visible && !reducedMotion.current) {
         cloudMesh.rotation.y += dt * 0.022;
       }
 
@@ -986,14 +996,14 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-[#04070D] p-6 text-center">
         <Compass className="w-8 h-8 text-cyan-400 mb-3" />
-        <p className="text-sm font-medium text-slate-200">{webglError}</p>
+        <p className="text-sm font-medium text-slate-200">{t('globeFallback')}</p>
         {onOpenInMap && (
           <button
             type="button"
             onClick={onOpenInMap}
             className="mt-4 px-4 py-2 text-xs font-medium bg-cyan-400 text-slate-950 rounded-lg cursor-pointer"
           >
-            Ir al Mapa Satelital
+            {t('globeMap')}
           </button>
         )}
       </div>
@@ -1006,6 +1016,7 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
         fullBleed ? '' : 'rounded-2xl border border-white/[0.08]'
       }`}
     >
+      {skinUnavailable && <p role="status" className="absolute top-3 left-3 right-3 z-30 rounded bg-slate-950/90 p-2 text-xs text-amber-200">{t('textureFallback')}</p>}
       {/* Dedicated WebGL Mount Container */}
       <div ref={mountRef} className="w-full h-full" />
 
@@ -1029,7 +1040,7 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
           <button
             type="button"
             onClick={() => sceneHandlesRef.current?.focusLatLon(PIURA_LAT, PIURA_LON, 4.1)}
-            title="Centrar en Piura"
+            title={t('globeCenter')}
             className="p-1.5 rounded-lg bg-[#080D17]/92 border border-white/[0.1] text-slate-300 hover:text-cyan-300 cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -1039,11 +1050,11 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
 
       {/* Sleek Single-Row Aerospace Instrument Dock (Zero backdrop-blur over WebGL) */}
       {!minimal && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 max-w-[96vw]">
+        <div className="earth-dock">
           {activeSkinMeta?.legend && (
             <div className="px-3.5 py-1.5 rounded-md bg-[#050811]/95 border border-white/[0.11] shadow-lg min-w-[260px] max-w-[340px]">
               <div className="text-[10px] font-mono text-slate-300 mb-1 flex items-center justify-between gap-2">
-                <span>{activeSkinMeta.legend.title}</span>
+                <span>{skinMode === 'lst' ? 'MODIS · '+t('lst') : skinMode === 'imerg' ? 'GPM IMERG · '+t('precipitation') : 'MODIS · '+t('ndvi')}</span>
               </div>
               <div
                 className="h-1.5 w-full rounded-sm"
@@ -1053,103 +1064,32 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
               />
               <div className="flex justify-between text-[10px] font-mono text-slate-400 mt-1 tabular-nums">
                 {activeSkinMeta.legend.labels.map((lbl) => (
-                  <span key={lbl}>{lbl}</span>
+                  <span key={language === 'en' ? lbl.replace('Árido', 'Arid').replace(',', '.') : lbl}>{lbl}</span>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="flex items-center flex-wrap justify-center gap-1 px-2 py-1.5 rounded-lg bg-[#050811]/94 border border-white/[0.12] shadow-[0_18px_45px_rgba(0,0,0,0.85)]">
-            {SKIN_OPTIONS.map((skin) => (
-              <button
-                key={skin.id}
-                type="button"
-                onClick={() => setSkinMode(skin.id)}
-                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                  skinMode === skin.id
-                    ? 'bg-white text-slate-950 font-semibold'
-                    : 'text-slate-300 hover:text-white hover:bg-white/[0.06]'
-                }`}
-              >
-                {skin.label}
+          <div className="earth-dock-panel">
+            <div className="earth-dock-layers" role="group" aria-label={t('layer')}>
+              {SKIN_OPTIONS.map((skin) => (
+                <button key={skin.id} type="button" aria-pressed={skinMode === skin.id} onClick={() => setSkinMode(skin.id)}>
+                  {t(skinLabels[skin.id])}
+                </button>
+              ))}
+            </div>
+            <div className="earth-dock-actions">
+              <div className="earth-dock-zoom" role="group" aria-label="Zoom">
+                <button type="button" aria-label={t('zoomOut')} title={t('zoomOut')} onClick={() => sceneHandlesRef.current?.zoom(1.15)}><Minus size={16} /></button>
+                <button type="button" aria-label={t('zoomIn')} title={t('zoomIn')} onClick={() => sceneHandlesRef.current?.zoom(0.85)}><Plus size={16} /></button>
+              </div>
+              <button type="button" aria-pressed={autoRotate} onClick={() => setAutoRotate((v) => !v)} title={t('globeRotation')}>
+                {autoRotate ? <Pause size={14} /> : <Play size={14} />}{t('globeRotate')}
               </button>
-            ))}
-
-            {skinLoading && (
-              <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin mx-1 shrink-0" />
-            )}
-
-            <span className="hidden sm:block h-4 w-[1px] bg-white/[0.12] mx-1" aria-hidden="true" />
-
-            <button
-              type="button"
-              onClick={() => setAutoRotate((v) => !v)}
-              title="Alternar rotación planetaria"
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer ${
-                autoRotate ? 'text-cyan-300 bg-cyan-500/15' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              {autoRotate ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-              Giro
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowClouds((v) => !v)}
-              title="Mostrar/ocultar nubes"
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer ${
-                showClouds ? 'text-sky-300 bg-sky-500/15' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Cloud className="w-3 h-3" />
-              Nubes
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowEonet((v) => !v)}
-              title="Eventos regionales NASA EONET"
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer ${
-                showEonet ? 'text-amber-300 bg-amber-500/15' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Flame className="w-3 h-3" />
-              EONET
-            </button>
-
-            <label className="hidden md:flex items-center gap-1.5 px-2 py-1 rounded text-[11px] text-slate-300 cursor-pointer">
-              <Sun className="w-3 h-3 text-amber-300 shrink-0" />
-              <input
-                type="range"
-                min={0}
-                max={360}
-                step={5}
-                value={sunAngleDeg}
-                onChange={(e) => setSunAngleDeg(Number(e.target.value))}
-                aria-label="Ángulo de luz solar"
-                className="sci-range w-14"
-              />
-            </label>
-
-            <button
-              type="button"
-              onClick={() => sceneHandlesRef.current?.focusLatLon(PIURA_LAT, PIURA_LON, 3.8)}
-              className="px-2.5 py-1 rounded text-xs font-medium text-emerald-300 hover:bg-emerald-500/15 transition-colors inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              <Satellite className="w-3 h-3" />
-              Piura
-            </button>
-
-            {onOpenInMap && (
-              <button
-                type="button"
-                onClick={onOpenInMap}
-                className="px-3 py-1 rounded text-xs font-semibold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition-colors inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
-              >
-                <MapPin className="w-3 h-3" />
-                Mapa
-              </button>
-            )}
+              <button type="button" onClick={() => sceneHandlesRef.current?.focusLatLon(PIURA_LAT, PIURA_LON, 3.8)}><Satellite size={14} />Piura</button>
+              {onOpenInMap && <button type="button" className="earth-dock-explore" onClick={onOpenInMap}><MapPin size={14} />{t('globeMap')}</button>}
+              {skinLoading && <Loader2 role="status" aria-label={t('running')} className="w-4 h-4 text-cyan-300 animate-spin" />}
+            </div>
           </div>
         </div>
       )}
