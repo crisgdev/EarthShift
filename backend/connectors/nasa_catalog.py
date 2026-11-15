@@ -12,7 +12,10 @@ NASA_CATALOG: List[Dict[str, Any]] = [
         "bands": [
             "NDVI",
             "EVI",
-            "QA",
+            "pixel_reliability",
+            "VI_Quality_MODLAND",
+            "VI_Quality_Adjacent_cloud_detected",
+            "VI_Quality_Possible_shadow",
         ],
         "unit": "index",
         "spatial_resolution": "250 m",
@@ -23,15 +26,27 @@ NASA_CATALOG: List[Dict[str, Any]] = [
             "AppEEARS",
             "CMR",
         ],
-        "status": "processed_data_available",
-        "verified_against_current_csv": False,
+        "raw_file": (
+            "Piura-Variables-MODIS-"
+            "MOD13Q1-061-results.csv"
+        ),
+        "processing_script": (
+            "backend/processing/"
+            "clean_modis_vegetacion.py"
+        ),
+        "qa_manifest": (
+            "data/processed/"
+            "qa_modis_vegetacion.json"
+        ),
+        "status": "provenance_verified",
         "api_verified": False,
+        "provenance_verified": True,
+        "verified_against_current_csv": True,
         "used_by_engines": True,
         "notes": (
-            "Producto recomendado por la guia. "
-            "Los CSV procesados actuales contienen datos MODIS, "
-            "pero debe confirmarse mediante manifiesto o script "
-            "que provienen exactamente de MOD13Q1 v061."
+            "La procedencia MODIS MOD13Q1.061 esta "
+            "documentada por el script de procesamiento, "
+            "archivo crudo y manifiesto QA del repositorio."
         ),
     },
     {
@@ -39,29 +54,46 @@ NASA_CATALOG: List[Dict[str, Any]] = [
         "variable": "precipitation",
         "provider": "NASA",
         "mission": "GPM",
-        "product": "IMERG",
-        "version": "V07",
+        "product": "GPM_3IMERGM",
+        "version": "07",
         "bands": [
             "precipitation",
         ],
         "unit": "mm",
-        "spatial_resolution": "approximately 0.1 degree",
-        "temporal_resolution": (
-            "subdaily/daily/monthly depending on product"
+        "spatial_resolution": (
+            "regional series for Piura in current pipeline"
         ),
+        "temporal_resolution": "monthly",
         "access_methods": [
             "NASA Earthdata",
             "GES DISC",
             "CMR",
         ],
-        "status": "target_source_not_verified",
-        "verified_against_current_csv": False,
+        "raw_file": (
+            "g4.areaAvgTimeSeries."
+            "GPM_3IMERGM_07_precipitation."
+            "20000101-20260930."
+            "81W_6S_79W_4S.csv"
+        ),
+        "download_script": (
+            "data/scripts/download_gpm.py"
+        ),
+        "processing_script": (
+            "backend/processing/"
+            "clean_precipitation.py"
+        ),
+        "status": "provenance_verified",
         "api_verified": False,
-        "used_by_engines": False,
+        "provenance_verified": True,
+        "verified_against_current_csv": True,
+        "used_by_engines": True,
+        "spatial_match": "approximate",
         "notes": (
-            "Fuente objetivo recomendada para precipitacion. "
-            "No debe afirmarse que earthshift_general_mensual.csv "
-            "proviene de IMERG hasta confirmar su procedencia."
+            "La procedencia GPM IMERG V07 esta "
+            "documentada por el script de descarga y "
+            "procesamiento del repositorio. "
+            "La serie representa Piura general y no "
+            "coincide exactamente con cada zona MODIS."
         ),
     },
     {
@@ -86,13 +118,15 @@ NASA_CATALOG: List[Dict[str, Any]] = [
             "/api/temporal/daily/point"
         ),
         "status": "operational_verified",
-        "verified_against_current_csv": False,
         "api_verified": True,
+        "provenance_verified": True,
+        "verified_against_current_csv": False,
         "used_by_engines": False,
         "notes": (
             "Fuente NASA real verificada mediante API. "
-            "Consulta probada para Piura con PRECTOTCORR y T2M. "
-            "NASA POWER no debe confundirse con GPM IMERG."
+            "Consulta probada para Piura con "
+            "PRECTOTCORR y T2M. "
+            "NASA POWER no es GPM IMERG."
         ),
     },
     {
@@ -114,22 +148,23 @@ NASA_CATALOG: List[Dict[str, Any]] = [
             "/api/v3/events"
         ),
         "status": "operational_verified",
-        "verified_against_current_csv": False,
         "api_verified": True,
+        "provenance_verified": True,
+        "verified_against_current_csv": False,
         "used_by_engines": False,
         "notes": (
-            "Segunda fuente NASA real verificada mediante API. "
-            "Se utiliza como fuente contextual de eventos. "
-            "No sustituye MODIS ni GPM IMERG en los motores."
+            "Fuente NASA real verificada mediante API. "
+            "Se utiliza como fuente contextual. "
+            "No sustituye MODIS ni GPM IMERG."
         ),
     },
     {
         "id": "modis_lst",
         "variable": "land_surface_temperature",
         "provider": "NASA",
-        "mission": "Terra/Aqua MODIS",
-        "product": "MODIS LST",
-        "version": None,
+        "mission": "Terra MODIS",
+        "product": "MOD11A2",
+        "version": "061",
         "bands": [
             "LST",
         ],
@@ -141,13 +176,24 @@ NASA_CATALOG: List[Dict[str, Any]] = [
             "AppEEARS",
             "CMR",
         ],
-        "status": "processed_partial",
-        "verified_against_current_csv": False,
+        "raw_file": (
+            "Piura-Variables-MODIS-"
+            "MOD11A2-061-results.csv"
+        ),
+        "processing_script": (
+            "backend/processing/"
+            "clean_modis_temperatura.py"
+        ),
+        "status": "provenance_verified_partial",
         "api_verified": False,
+        "provenance_verified": True,
+        "verified_against_current_csv": False,
         "used_by_engines": False,
         "notes": (
-            "Disponible de forma parcial en datos procesados. "
-            "Producto y version exactos deben confirmarse."
+            "El repositorio contiene procesamiento "
+            "MOD11A2.061 y conversion de Kelvin "
+            "a Celsius. Actualmente no es variable "
+            "principal de los motores."
         ),
     },
 ]
@@ -183,6 +229,14 @@ def get_api_verified_sources() -> List[Dict[str, Any]]:
     ]
 
 
+def get_provenance_verified_sources() -> List[Dict[str, Any]]:
+    return [
+        item
+        for item in NASA_CATALOG
+        if item.get("provenance_verified")
+    ]
+
+
 def get_csv_verified_sources() -> List[Dict[str, Any]]:
     return [
         item
@@ -197,9 +251,8 @@ def get_pending_verification_sources() -> List[Dict[str, Any]]:
     return [
         item
         for item in NASA_CATALOG
-        if not item.get("api_verified")
-        and not item.get(
-            "verified_against_current_csv"
+        if not item.get(
+            "provenance_verified"
         )
     ]
 
@@ -209,6 +262,9 @@ def get_catalog_summary() -> Dict[str, Any]:
         "total_sources": len(NASA_CATALOG),
         "api_verified_sources": len(
             get_api_verified_sources()
+        ),
+        "provenance_verified_sources": len(
+            get_provenance_verified_sources()
         ),
         "csv_verified_sources": len(
             get_csv_verified_sources()
@@ -224,9 +280,21 @@ def get_catalog_summary() -> Dict[str, Any]:
             item["id"]
             for item in get_api_verified_sources()
         ],
+        "provenance_verified_ids": [
+            item["id"]
+            for item in
+            get_provenance_verified_sources()
+        ],
+        "engine_nasa_sources_verified": [
+            item["id"]
+            for item in get_engine_sources()
+            if item.get("provenance_verified")
+        ],
         "important_note": (
-            "processed_real_data no significa "
-            "automaticamente NASA API verified."
+            "NASA POWER y EONET estan verificados "
+            "mediante API. MODIS MOD13Q1.061 y "
+            "GPM IMERG V07 cuentan con evidencia "
+            "reproducible de procedencia en el repositorio."
         ),
     }
 
