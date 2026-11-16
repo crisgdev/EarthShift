@@ -39,3 +39,8 @@
 @media(max-width:720px) { .home-hero,.home-explain,.study-layout,.two-columns { grid-template-columns:1fr; }.home-hero { gap:0; }.hero-copy { padding:2.5rem 1.4rem 1rem; }.hero-copy h1 { max-width:13ch; }.home-earth { height:480px; }.home-explain { gap:2rem; }.study-map { height:520px; }.area-controls .two-columns { grid-template-columns:1fr 1fr; }.area-controls { order:2; }.study-layout>div:last-child { order:1; }.section-heading { flex-wrap:wrap; }.research-footer { flex-direction:column; }.paper,.result-card { padding:1rem; }.research-app dl { grid-template-columns:1fr; gap:.2rem; }.research-app dd { margin-bottom:.7rem; }.filters fieldset { margin-bottom:1rem; }.research-header nav { gap:0; }.research-header nav button { padding:.45rem .5rem; } }
 @media(prefers-reduced-motion:reduce) { .research-app * { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }
 .globe-caption { position:absolute; top:.8rem; left:1rem; right:1rem; z-index:3; font-size:.68rem; color:#bbd0d8!important; padding:.45rem .65rem; background:#071521b8; border-radius:8px; pointer-events:none; }
+
+.research-header .brand-wordmark { display:inline-flex; align-items:center; gap:10px; }
+.research-header .brand-wordmark .earthshift-logo { width:49px; height:49px; flex-shrink:0; object-fit:contain; }
+.research-header .brand-wordmark .earthshift-wordmark { color:#f0f4e4; font:inherit; letter-spacing:-.035em; }
+@media(max-width:420px) { .research-header .brand-wordmark .earthshift-logo { width:40px; height:40px; } }
