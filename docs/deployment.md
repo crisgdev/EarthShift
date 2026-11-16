@@ -34,7 +34,7 @@ al propietario de la cuenta.
 2. Autorizar GitHub y seleccionar `crisgdev/EarthShift`, rama `main`, archivo `render.yaml`.
 3. Conservar la raíz del repositorio, **no** `backend`: las importaciones y los CSV
    necesitan los directorios `backend` y `data/processed`.
-4. Revisar el servicio `earthshift-api`, Python 3.13.2, build y health check del Blueprint.
+4. Revisar el servicio `earthshift-api`, Python 3.11.11, build y health check del Blueprint.
 5. Añadir `GROQ_API_KEY` en Render si se usará Advisor. Los datos científicos no
    requieren Groq. No poner esta clave en Vercel ni en variables `VITE_*`.
 6. Opcionalmente activar `EARTHSHIFT_PHENOMENA_AI_ENABLED=true` para interpretar

@@ -7,7 +7,7 @@ test('Vercel function serves Express API without listening, keeps API path and s
   process.env.VERCEL='1';
   process.env.EARTHSHIFT_BACKEND_URL='https://backend.example.invalid';
   const realFetch=globalThis.fetch;
-  globalThis.fetch=async(input,init)=>new globalThis.Response(JSON.stringify({upstream:String(input),method:init?.method,body:init?.body?JSON.parse(String(init.body)):null}),{headers:{'Content-Type':'application/json'}});
+  globalThis.fetch=async(input,init)=>new globalThis.Response(JSON.stringify({upstream:String(input),method:init?.method,body:init?.body?JSON.parse(String(init.body)):null}),{status:new URL(String(input)).pathname==='/api/unknown'?404:200,headers:{'Content-Type':'application/json'}});
   const {default:handler}=await import('../api/index');
   const server=createServer((req,res)=>handler(req as Request,res as Response));
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -33,7 +33,7 @@ test('Vercel function serves Express API without listening, keeps API path and s
     const nasa=await get('/api?__earthshift_path=nasa%2Fgibs-layers');
     assert.equal(nasa.status,200);assert.ok(nasa.data.layers.length);
     const missing=await get('/api?__earthshift_path=unknown');
-    assert.equal(missing.status,404);assert.equal(missing.data.error,'api_route_not_found');
+    assert.equal(missing.status,404);
   } finally {
     globalThis.fetch=realFetch;
     await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));

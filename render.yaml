@@ -16,7 +16,7 @@ services:
         - render.yaml
     envVars:
       - key: PYTHON_VERSION
-        value: 3.13.2
+        value: 3.11.11
       - key: EARTHSHIFT_ENV
         value: production
       - key: EARTHSHIFT_FRONTEND_ORIGINS
@@ -29,3 +29,7 @@ services:
         sync: false
       - key: GROQ_MODEL
         value: llama-3.3-70b-versatile
+      - key: EARTHSHIFT_CACHE_TTL_SECONDS
+        value: "300"
+      - key: EARTHSHIFT_NASA_TIMEOUT_SECONDS
+        value: "30"

@@ -1,5 +1,6 @@
 import { compare } from './src/research/comparison.mjs';
 import {resolveGibsTile} from './src/services/gibsTiles.mjs';
+import {createBackendProxy} from './src/research/backend-proxy.mjs';
 import {backendOrigin} from './src/services/deploymentConfig.mjs';
 import 'dotenv/config';
 import express from 'express';
@@ -10,24 +11,6 @@ const app = express();
 app.use(express.json({ limit: '32kb' }));
 // Same-origin access to FastAPI in development and production.
 const EARTHSHIFT_BACKEND_URL = backendOrigin();
-const EARTHSHIFT_PATHS = ['/api/health', '/api/variables', '/api/regions', '/api/cells', '/api/series', '/api/findings', '/api/data-status', '/api/intelligence'];
-app.use(EARTHSHIFT_PATHS, async (req, res) => {
-  res.setHeader('Cache-Control','no-store');
-  if(!EARTHSHIFT_BACKEND_URL)return res.status(503).json({error:'backend_not_configured',message:'Configura EARTHSHIFT_BACKEND_URL con la URL pública de FastAPI.'});
-  try {
-    const upstream = await fetch(EARTHSHIFT_BACKEND_URL + req.originalUrl, {
-      method: req.method,
-      headers: { 'Content-Type': 'application/json' },
-      body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body),
-      signal: AbortSignal.timeout(90000),
-    });
-    if (!upstream.ok) return res.status(upstream.status).json({ error: 'Datos no disponibles temporalmente.' });
-    return res.status(upstream.status).json(await upstream.json());
-  } catch (error) {
-    console.error('EarthShift backend unavailable', error);
-    return res.status(503).json({ error: 'Datos no disponibles temporalmente.' });
-  }
-});
 app.post('/api/research/compare', async (req, res) => {
   try {
     if (req.body?.mode === 'synthetic') return res.status(400).json({error:'synthetic_mode_disabled'});
@@ -575,5 +558,6 @@ app.get('/api/nasa/gibs-layers', (_req, res) => {
 });
 
 
-app.use('/api', (_req,res)=>res.status(404).json({error:'api_route_not_found'}));
+app.get('/healthz', (_req,res)=>res.json({status:'ok',service:'EarthShift web'}));
+app.use('/api',createBackendProxy(EARTHSHIFT_BACKEND_URL));
 export default app;
