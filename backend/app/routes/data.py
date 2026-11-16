@@ -332,6 +332,8 @@ def get_series(
             "source":
                 "processed_real_data",
 
+            "demo": False,
+
             "region":
                 selected_region,
 

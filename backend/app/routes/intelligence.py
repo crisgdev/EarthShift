@@ -1,8 +1,12 @@
+import logging
+
 from fastapi import (
     APIRouter,
     HTTPException,
     Query,
 )
+
+from backend.app.config import EARTHSHIFT_DEMO_MODE
 
 from backend.app.schemas.intelligence import (
     AdvisorRequest,
@@ -16,6 +20,8 @@ from backend.app.services.advisor_service import (
 from backend.app.services.intelligence_context import (
     build_intelligence_context,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/intelligence",
@@ -100,7 +106,8 @@ def run_advisor(
 
     except Exception as error:
         ai_status = "unavailable"
-        ai_error = str(error)
+        logger.exception("EarthShift Advisor no pudo obtener la interpretacion de Groq")
+        ai_error = "El servicio de inteligencia no está disponible temporalmente."
 
     return {
         "status": "ok",

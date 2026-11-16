@@ -59,6 +59,7 @@ def run_phenomena(
         ) from error
 
     except RuntimeError as error:
+        logger.exception("EarthShift Phenomena no pudo obtener los registros de NOAA")
         raise HTTPException(
             status_code=503,
             detail=(

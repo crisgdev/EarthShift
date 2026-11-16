@@ -18,7 +18,9 @@ def generate_groq_response(
         )
 
     client = Groq(
-        api_key=GROQ_API_KEY
+        api_key=GROQ_API_KEY,
+        timeout=30.0,
+        max_retries=1,
     )
 
     try:

@@ -1,3 +1,5 @@
+from pydantic import ValidationError
+from backend.app.schemas.phenomena import PhenomenaInterpretation
 import json
 from collections import Counter
 
@@ -318,48 +320,7 @@ FORMATO:
             "Groq no devolvio JSON valido."
         ) from error
 
-    if not isinstance(
-        result,
-        dict,
-    ):
-        raise RuntimeError(
-            "Groq no devolvio un objeto JSON."
-        )
-
-    expected_fields = [
-        "status",
-        "summary",
-        "findings",
-        "possible_relationships",
-        "limitations",
-        "research_questions",
-    ]
-
-    for field in expected_fields:
-        if field not in result:
-            raise RuntimeError(
-                "Groq no devolvio el campo "
-                f"requerido: {field}"
-            )
-
-    relationships = result.get(
-        "possible_relationships",
-        [],
-    )
-
-    if isinstance(
-        relationships,
-        list,
-    ):
-        for relationship in relationships:
-            if isinstance(
-                relationship,
-                dict,
-            ):
-                relationship[
-                    "causality_established"
-                ] = False
-
-    result["status"] = "completed"
-
-    return result
+    try:
+        return PhenomenaInterpretation.model_validate(result).model_dump()
+    except ValidationError as error:
+        raise RuntimeError("Groq devolvio una interpretacion con estructura invalida.") from error

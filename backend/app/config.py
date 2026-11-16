@@ -54,7 +54,7 @@ GROQ_MODEL = os.getenv(
 )
 
 
-# EarthShift Phenomena -> Gemini
+# Gemini: conector opcional; Advisor y Phenomena utilizan Groq
 GEMINI_API_KEY = os.getenv(
     "GEMINI_API_KEY"
 )

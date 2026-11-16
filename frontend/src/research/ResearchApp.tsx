@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { EarthGlobe3D } from '../components/EarthGlobe3D';
-import { PIURA_STATIONS, HISTORICAL_TRENDS_PIURA } from '../data/piuraData';
 import { LanguageProvider, useLanguage, type Key } from './i18n';
 import { StudyGlobe, type StudyArea } from './StudyGlobe';
 import Intelligence from './Intelligence';
+import Events from './EnvironmentalEvents';
+import { earthshift, requireReal } from '../services/earthshiftClient';
 import { selectionTransition, validateRequest } from './comparison.mjs';
 import './research.css';
 const COLORS=['#6ee7b7','#fbbf24'];
@@ -79,57 +80,49 @@ function Results({result,stale,active}:{result:any;stale:boolean;active:boolean}
     <aside className="paper"><h3>{t('seasonal')}</h3><p>{t('seasonalNote')}</p><p>{t('airVsSurface')}</p></aside>
   </section>;
 }
+function ProcessedDownload({data,csv=false}:{data:any[];csv?:boolean}) {
+  const {t,language}=useLanguage();
+  function save(){
+    const content=csv?['region,year,ndvi,precipitation_mm,surface_temperature_c,soil_moisture',...data.flatMap(item=>item.series.map((row:any)=>[item.region,row.year,row.ndvi??'',row.precipitation_mm??'',row.surface_temperature_c??'',row.soil_moisture??''].map(value=>'"'+String(value).replaceAll('"','""')+'"').join(',')))].join('\r\n'):JSON.stringify(data,null,2);
+    const url=URL.createObjectURL(new Blob([content],{type:csv?'text/csv;charset=utf-8':'application/json;charset=utf-8'}));
+    const a=document.createElement('a');a.href=url;a.download='earthshift-processed.'+(csv?'csv':'json');a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  return <button disabled={!data.length} onClick={save}>{csv ? (language==='es'?'Descargar CSV anual':'Download annual CSV') : t('export')}</button>;
+}
 function Comparison({demoSignal,active}:{demoSignal:number;active:boolean}) {
   const {t,number}=useLanguage();
-  const [selection,setSelection]=useState<{areas:(StudyArea|null)[];editing:number}>({areas:INITIAL_AREAS,editing:0});
-  const [period,setPeriod]=useState(getDefaultPeriod),[periodB,setPeriodB]=useState(getDefaultPeriod),[separate,setSeparate]=useState(false);
-  const [variables,setVariables]=useState<string[]>(['precipitation','ndvi','soil_moisture','lst']);
-  const [result,setResult]=useState<any>(null),[pending,setPending]=useState(false),[error,setError]=useState(''),[mode,setMode]=useState('real');
-  const requestId=useRef(0),controller=useRef<AbortController|null>(null);
-  function transition(action:any){setSelection(s=>selectionTransition(s,action));}
-  const body={areas:selection.areas,period,periodB:separate?periodB:undefined,separatePeriods:separate,variables,mode};
-  const signature=JSON.stringify(body),[completedSignature,setCompletedSignature]=useState('');
-  async function run(override?:any,synthetic=false){
-    const payload=override??{...body,mode:synthetic?'synthetic':'real'};setMode(payload.mode);
-    try{validateRequest(payload);}catch{setError('inputError');return;}
-    controller.current?.abort();const abort=new AbortController();controller.current=abort;const rid=++requestId.current;setPending(true);setError('');
-    try {const response=await fetch('/api/research/compare',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:abort.signal});if(!response.ok)throw Error('request');const data=await response.json();if(rid===requestId.current){setResult(data);setCompletedSignature(JSON.stringify(payload));}}
-    catch(e){if(!abort.signal.aborted&&rid===requestId.current)setError('requestError');}
-    finally{if(rid===requestId.current)setPending(false);}
-  }
-  useEffect(()=>{if(!demoSignal)return;const demo={areas:INITIAL_AREAS,period:getDefaultPeriod(),separatePeriods:false,variables:['precipitation','ndvi','soil_moisture','lst'],mode:'real'};setSelection({areas:INITIAL_AREAS,editing:0});setPeriod(getDefaultPeriod());setSeparate(false);setVariables(demo.variables);setMode('real');run(demo);},[demoSignal]);
-  useEffect(()=>()=>controller.current?.abort(),[]);
-  async function loadArchive() {
-    controller.current?.abort(); requestId.current++; setPending(true); setError('');
-    try { const response=await fetch('/cases/piura-2023.json');if(!response.ok)throw Error('archive');const data=await response.json();
-      if(data.schemaVersion!=='piura-watch.comparison.v1'||data.request.mode!=='real')throw Error('archive');
-      const archiveAreas=data.request.areas.map(({lat,lon,radiusKm}:StudyArea)=>({lat,lon,radiusKm}));setSelection({areas:archiveAreas,editing:0});setPeriod(data.request.periods[0]);setSeparate(false);setVariables(data.request.variables);setMode('real');setResult(data);
-      setCompletedSignature(JSON.stringify({areas:archiveAreas,period:data.request.periods[0],separatePeriods:false,variables:data.request.variables,mode:'real'}));
-    } catch {setError('requestError');}finally{setPending(false);}
-  }
-  function updateArea(i:number,patch:Partial<StudyArea>) {setSelection(s=>({...s,areas:s.areas.map((a,j)=>j===i?{...(a??{lat:0,lon:0,radiusKm:10}),...patch}:a)}));}
+  const [regions,setRegions]=useState<string[]>([]),[region,setRegion]=useState(''),[second,setSecond]=useState('');
+  const [catalog,setCatalog]=useState<any[]>([]),[variables,setVariables]=useState<string[]>([]);
+  const [data,setData]=useState<any[]>([]),[pending,setPending]=useState(false),[error,setError]=useState('');
+  const [areas,setAreas]=useState<(StudyArea|null)[]>([INITIAL_AREAS[0],null]);
+  useEffect(()=>{const abort=new AbortController();Promise.all([earthshift('/regions',{signal:abort.signal}),earthshift('/cells',{signal:abort.signal}),earthshift('/variables',{signal:abort.signal})]).then(([r,c,v])=>{
+    if(abort.signal.aborted)return;
+    const available=r.regions.filter((id:string)=>c.cells.some((cell:any)=>cell.region===id && cell.source==='processed_real_data'));
+    setRegions(available);setRegion(available[0]||'');setSecond(available[1]||'');setCatalog(v.variables);setVariables(v.variables.map((item:any)=>item.id));
+    if(!available.length)setError('Datos no disponibles temporalmente.');
+  }).catch(()=>{if(!abort.signal.aborted)setError('Datos no disponibles temporalmente.');});return()=>abort.abort();},[]);
+  useEffect(()=>{if(!region)return;const abort=new AbortController();setPending(true);setError('');setData([]);
+    const selected=[region,...(second && second!==region?[second]:[])];
+    Promise.all(selected.map(id=>earthshift('/series?region='+encodeURIComponent(id),{signal:abort.signal}).then(requireReal))).then(result=>{if(!abort.signal.aborted)setData(result);}).catch(()=>{if(!abort.signal.aborted)setError('Datos no disponibles temporalmente.');}).finally(()=>{if(!abort.signal.aborted)setPending(false);});return()=>abort.abort();
+  },[region,second]);
+  const keys:Record<string,string>={ndvi:'ndvi',precipitation:'precipitation_mm',surface_temperature:'surface_temperature_c',soil_moisture:'soil_moisture'};
+  const chart=data[0]?.series.map((point:any)=>{const other=data[1]?.series.find((row:any)=>row.year===point.year);return {...point,...Object.fromEntries(catalog.map(v=>[v.id+'_B',other?.[keys[v.id]]??null]))};}) || [];
   return <div className="research-content">
-    <div className="section-heading"><div><h1>{t('compare')}</h1><p>{t('question')}</p></div></div>
-    <div className="study-layout"><div className="area-controls paper"><div className="section-heading"><h2>{t('choose')}</h2><button onClick={()=>transition({type:'swap'})}>{t('swap')}</button></div>
-      {selection.areas.map((a,i)=><fieldset key={i} className={'area-form area-'+(i===0?'A':'B')}><legend><span className="area-letter">{i===0?'A':'B'}</span> {t('area')} {i===0?'A':'B'} {selection.editing===i&&<span className="status-badge">{t('editing')}</span>}</legend>
-        <div className="button-row"><button aria-pressed={selection.editing===i} onClick={()=>transition({type:'edit',index:i})}>{t('edit')}</button><button onClick={()=>transition({type:'clear',index:i})}>{t('clear')}</button></div>
-        {!a&&<p>{t('emptyArea')}</p>}
-        <div className="two-columns"><label>{t('latitude')}<input type="number" min="-90" max="90" step="0.001" value={a&&Number.isFinite(a.lat)?a.lat:''} onChange={e=>updateArea(i,{lat:e.target.value===''?NaN:Number(e.target.value)})}/></label><label>{t('longitude')}<input type="number" min="-180" max="180" step="0.001" value={a&&Number.isFinite(a.lon)?a.lon:''} onChange={e=>updateArea(i,{lon:e.target.value===''?NaN:Number(e.target.value)})}/></label></div>
-        <label>{t('radius')}<input type="number" min="1" max="100" value={a&&Number.isFinite(a.radiusKm)?a.radiusKm:''} onChange={e=>updateArea(i,{radiusKm:Number(e.target.value)})}/></label>
-      </fieldset>)}</div>
-      <div><StudyGlobe areas={selection.areas} editing={selection.editing} onPick={area=>transition({type:'select',area})}/></div>
-    </div>
-    <section className="paper filters"><h2>{t('variablesStep')}</h2><div className="two-columns"><fieldset><legend>{t('period')} · A {separate?'':'/ B'}</legend><div className="two-columns"><label>{t('startDate')}<input type="date" value={period.start} onChange={e=>setPeriod(p=>({...p,start:e.target.value}))}/></label><label>{t('endDate')}<input type="date" value={period.end} onChange={e=>setPeriod(p=>({...p,end:e.target.value}))}/></label></div><label className="checkbox"><input type="checkbox" checked={separate} onChange={e=>setSeparate(e.target.checked)}/>{t('separate')}</label>{separate&&<><div className="two-columns"><label>B · {t('startDate')}<input type="date" value={periodB.start} onChange={e=>setPeriodB(p=>({...p,start:e.target.value}))}/></label><label>B · {t('endDate')}<input type="date" value={periodB.end} onChange={e=>setPeriodB(p=>({...p,end:e.target.value}))}/></label></div><p className="notice">{t('separateWarning')}</p></>}</fieldset>
-      <fieldset><legend>{t('variablesStep')}</legend>{VARIABLES.map(id=><label className="checkbox" key={id}><input type="checkbox" checked={variables.includes(id)} onChange={e=>setVariables(v=>e.target.checked?[...v,id]:v.filter(x=>x!==id))}/>{t(id)} {id!=='precipitation'&&id!=='air_temperature'&&<small>{t('unavailable')}</small>}</label>)}</fieldset></div>
-      <div className="button-row"><button className="primary" disabled={pending} onClick={()=>run()}>{pending?t('running'):t('run')}</button><button disabled={pending} onClick={()=>run(undefined,true)}>{t('synthetic')}</button></div>
-      {error&&<p role="alert" className="notice">{t(error as Key)}</p>}{pending&&<p role="status">{t('running')}</p>}
-      <button disabled={pending} onClick={loadArchive}>{t('archived')}</button>
-    </section>
-    <Results result={result} stale={!!result&&signature!==completedSignature} active={active}/>
+    <div className="section-heading"><div><h1>{t('compare')}</h1><p>Regiones con datos procesados EarthShift</p></div><div className="button-row"><ProcessedDownload data={data}/><ProcessedDownload data={data} csv/></div></div>
+    <div className="study-layout"><div className="area-controls paper"><h2>{t('choose')}</h2>
+      <fieldset className="area-form area-A"><legend><span className="area-letter">A</span> Región</legend><select value={region} disabled={!regions.length} onChange={e=>setRegion(e.target.value)}>{regions.map(id=><option key={id}>{id}</option>)}</select></fieldset>
+      <fieldset className="area-form area-B" disabled={regions.length<2}><legend><span className="area-letter">B</span> Región</legend><select value={second} onChange={e=>setSecond(e.target.value)}><option value="">—</option>{regions.filter(id=>id!==region).map(id=><option key={id}>{id}</option>)}</select></fieldset>
+      {regions.length<2 && <p className="fine-print">Se requieren al menos dos regiones con datos procesados para realizar una comparación regional.</p>}
+    </div><div><StudyGlobe areas={areas} editing={0} onPick={area=>setAreas([area,null])}/><p className="fine-print">El mapa puede mostrar contexto satelital global, pero los análisis EarthShift están disponibles únicamente para regiones con datos procesados. Seleccionar el globo no cambia la región estudiada.</p></div></div>
+    <section className="paper filters"><h2>{t('variablesStep')}</h2><div className="button-row">{catalog.map(v=><label className="checkbox" key={v.id}><input type="checkbox" checked={variables.includes(v.id)} onChange={e=>setVariables(current=>e.target.checked?[...current,v.id]:current.filter(id=>id!==v.id))}/>{v.name} · {v.unit}</label>)}</div><p className="fine-print">{data.map(item=>item.region+' · '+item.period+' · '+item.source).join(' / ')}</p>{pending && <p role="status">{t('running')}</p>}{error && <p role="alert" className="notice">{error}</p>}</section>
+    <section className="results">{!pending && !error && !data.length && <p>Datos no disponibles temporalmente.</p>}{catalog.filter(v=>variables.includes(v.id)).map(v=><article className="result-card" key={v.id}><div className="section-heading"><h3>{v.name}</h3><span>{v.unit}</span></div>
+      {data.length>0 && active && <div className="comparison-chart" role="img" aria-label={v.name}><ResponsiveContainer width="100%" height="100%"><LineChart data={chart} margin={{top:20,right:18,bottom:12,left:4}}><CartesianGrid stroke="#203649" strokeDasharray="3 5"/><XAxis dataKey="year" stroke="#a8bac7"/><YAxis stroke="#a8bac7"/><Tooltip contentStyle={{background:'#102434',border:'1px solid #345264',borderRadius:10}} formatter={(value:any)=>[number(value)+' '+v.unit,v.name]}/><Line dataKey={keys[v.id]} name={region} stroke={COLORS[0]} dot={false} connectNulls={false}/>{data.length>1 && <Line dataKey={v.id+'_B'} name={second} stroke={COLORS[1]} dot={false} connectNulls={false}/>}</LineChart></ResponsiveContainer></div>}
+      <p className="fine-print">{v.source} · {v.aggregation}</p><details><summary>Cobertura de datos y observaciones</summary>{data.map(item=><div key={item.region}><p>{item.region} · valid_fraction: {typeof item.quality?.variables?.[v.id]?.valid_fraction==='number'?number(item.quality.variables[v.id].valid_fraction*100)+'%':'—'}</p><div className="table-scroll"><table><thead><tr><th>Año</th><th>{v.name} ({v.unit})</th></tr></thead><tbody>{item.series.map((point:any)=><tr key={point.year}><td>{point.year}</td><td>{number(point[keys[v.id]])}</td></tr>)}</tbody></table></div></div>)}</details>
+    </article>)}</section>
+    {!!data.length && <aside className="paper"><h3>Cobertura espacial y fuentes</h3><p className="fine-print">Las variables utilizan coberturas espaciales distintas. NDVI y temperatura superficial corresponden a la zona MODIS seleccionada; precipitación y humedad del suelo representan la serie regional general de Piura.</p><p className="fine-print">spatial_match: mixed · MODIS · GPM · GLDAS · processed_real_data</p></aside>}
   </div>;
 }
-function Events(){const {t,date,number}=useLanguage();const [data,setData]=useState<any>(null),[pending,setPending]=useState(false);async function load(){setPending(true);try{const r=await fetch('/api/nasa/eonet?days=180&limit=150');setData(r.ok?await r.json():{isLive:false});}catch{setData({isLive:false});}finally{setPending(false);}}useEffect(()=>{load();},[]);const regional=data?.events?.filter((e:any)=>e.lat>=-18&&e.lat<=0&&e.lon>=-84&&e.lon<=-68)??[];return <div className="research-content narrow"><h1>{t('events')}</h1><p>{t('eventIntro')}</p><p className="paper">{t('eventMethod')}</p><button disabled={pending} onClick={load}>{pending?t('running'):t('eventRefresh')}</button>{data?.isLive===false&&<p role="status" className="notice">{t('eventUnavailable')}</p>}{data?.isLive&&!regional.length&&<p>{t('eventEmpty')}</p>}{regional.map((e:any)=><article className="paper" key={e.id}><h2>{e.title}</h2><p>{date(e.date)} · {number(e.lat,3)}°, {number(e.lon,3)}°</p><p>{t('eventVerification')}</p><a href={e.sourceUrl} rel="noreferrer" target="_blank">{t('source')} ↗</a></article>)}</div>;}
-function Methods(){const {t}=useLanguage();return <div className="research-content narrow"><h1>{t('methodTitle')}</h1><p>{t('methodIntro')}</p><section className="paper"><h2>{t('processing')}</h2><p>{t('center_cell_daily_v1')}</p><p>{t('geometry')}</p><p>{t('coarse_grid')}</p><a href="https://power.larc.nasa.gov/docs/services/" target="_blank" rel="noreferrer">NASA POWER · {t('source')} ↗</a></section><section className="paper"><h2>{t('limitations')}</h2><p>{t('seasonalNote')}</p><p>{t('airVsSurface')}</p></section><section className="paper"><h2>{t('audit')}</h2><p>{t('auditText')}</p></section><section className="paper"><h2>{t('demo')}</h2><p>{t('demoQuestion')}</p></section></div>;}
+function Methods(){const {t}=useLanguage();return <div className="research-content narrow"><h1>{t('methodTitle')}</h1><p>{t('methodIntro')}</p><section className="paper"><h2>{t('processing')}</h2><p>Series anuales procesadas: NDVI y temperatura superficial MODIS; precipitación GPM y humedad del suelo GLDAS de la serie general de Piura.</p><p>spatial_match: mixed. Las gráficas muestran los datos de la API; los motores se ejecutan en el backend.</p><a href="https://modis.gsfc.nasa.gov/" target="_blank" rel="noreferrer">MODIS · {t('source')} ↗</a></section><section className="paper"><h2>{t('limitations')}</h2><p>{t('seasonalNote')}</p><p>{t('airVsSurface')}</p></section><section className="paper"><h2>{t('audit')}</h2><p>{t('auditText')}</p></section></div>;}
 function Lab(){return <Intelligence/>;}
 function Shell(){const {t,language}=useLanguage();const [page,setPage]=useState('home'),[visitedCompare,setVisitedCompare]=useState(false),[demoSignal,setDemoSignal]=useState(0),[intro,setIntro]=useState(()=>!matchMedia('(prefers-reduced-motion: reduce)').matches),[homeEvents,setHomeEvents]=useState<any[]>([]),[location,setLocation]=useState({lat:-5.1945,lon:-80.6328,label:'Piura'});useEffect(()=>{let cancelled=false;fetch('/api/nasa/eonet?days=45&limit=75').then(r=>r.json()).then(data=>{if(!cancelled&&data.isLive)setHomeEvents(data.events);}).catch(()=>{});return()=>{cancelled=true;};},[]);useEffect(()=>{const timer=setTimeout(()=>setIntro(false),2400);return()=>clearTimeout(timer);},[]);
   function navigate(next:string){if(next==='compare')setVisitedCompare(true);setPage(next);setIntro(false);}
@@ -137,7 +130,7 @@ function Shell(){const {t,language}=useLanguage();const [page,setPage]=useState(
   useEffect(()=>{document.title=(page==='lab'?'EarthShift Intelligence':'EarthShift · '+t(page as Key));},[page,language]);
   return <div className="research-app"><a className="skip-link" href="#research-main">{t('skip')}</a><header className="research-header"><button className="brand-wordmark" onClick={()=>navigate('home')}><img className="earthshift-logo" src="/earthshift-logo.svg" alt="" /><span className="earthshift-wordmark">EarthShift<span>{language==='en'?'Peru · Earth & evidence':'Perú · Tierra y evidencia'}</span></span></button><nav aria-label={t('home')}>{(['home','compare','methods','events','lab'] as const).map(key=><button aria-current={page===key?'page':undefined} key={key} onClick={()=>navigate(key)}>{t(key)}</button>)}</nav><LanguageSwitch/></header>
     <main id="research-main" tabIndex={-1}>
-      <div hidden={page!=='home'}><section className="home-hero"><div className="hero-copy"><h1>{t('headline')}</h1><p>{t('intro')}</p><div className="button-row"><button className="primary" onClick={()=>navigate('compare')}>{t('start')} →</button><button onClick={demo}>{t('demo')}</button></div></div><div className="home-earth"><EarthGlobe3D stations={[]} eonetEvents={homeEvents} selectedLocation={location} selectedEventId={null} gibsDate="2023-03-15" onSelectLocation={coords=>setLocation({...coords,label:t('newSelection')})} onSelectStation={noOp} onSelectEvent={noOp} onOpenInMap={()=>navigate('compare')}/></div></section><div className="research-content home-explain"><section><h2>{t('why')}</h2><p>{t('whyText')}</p></section><section><h2>{t('supports')}</h2><p>{t('supportsText')}</p></section></div></div>
+      <div hidden={page!=='home'}><section className="home-hero"><div className="hero-copy"><h1>{t('headline')}</h1><p>{t('intro')}</p><div className="button-row"><button className="primary" onClick={()=>navigate('compare')}>{t('start')} →</button></div></div><div className="home-earth"><EarthGlobe3D stations={[]} eonetEvents={homeEvents} selectedLocation={location} selectedEventId={null} gibsDate="2023-03-15" onSelectLocation={coords=>setLocation({...coords,label:t('newSelection')})} onSelectStation={noOp} onSelectEvent={noOp} onOpenInMap={()=>navigate('compare')}/></div></section><div className="research-content home-explain"><section><h2>{t('why')}</h2><p>{t('whyText')}</p></section><section><h2>{t('supports')}</h2><p>{t('supportsText')}</p></section></div></div>
       {visitedCompare&&<div hidden={page!=='compare'}><Comparison demoSignal={demoSignal} active={page==='compare'}/></div>}
       {page==='methods'&&<Methods/>}{page==='events'&&<Events/>}{page==='lab'&&<Lab/>}
     </main><footer className="research-footer">EarthShift · NASA Space Apps Challenge </footer>

@@ -11,8 +11,29 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '32kb' }));
+// Same-origin access to FastAPI in development and production.
+const EARTHSHIFT_BACKEND_URL = (process.env.EARTHSHIFT_BACKEND_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+const EARTHSHIFT_PATHS = ['/api/variables', '/api/regions', '/api/cells', '/api/series', '/api/intelligence'];
+app.use(EARTHSHIFT_PATHS, async (req, res) => {
+  try {
+    const upstream = await fetch(EARTHSHIFT_BACKEND_URL + req.originalUrl, {
+      method: req.method,
+      headers: { 'Content-Type': 'application/json' },
+      body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body),
+      signal: AbortSignal.timeout(90000),
+    });
+    if (!upstream.ok) return res.status(upstream.status).json({ error: 'Datos no disponibles temporalmente.' });
+    return res.status(upstream.status).json(await upstream.json());
+  } catch (error) {
+    console.error('EarthShift backend unavailable', error);
+    return res.status(503).json({ error: 'Datos no disponibles temporalmente.' });
+  }
+});
 app.post('/api/research/compare', async (req, res) => {
-  try { res.json(await compare(req.body)); }
+  try {
+    if (req.body?.mode === 'synthetic') return res.status(400).json({error:'synthetic_mode_disabled'});
+    res.json(await compare(req.body));
+  }
   catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : 'invalid_request' }); }
 });
 
@@ -100,6 +121,7 @@ app.get('/api/nasa/status', async (_req, res) => {
 
   let eonetOnline = false;
   let powerOnline = false;
+  let gibsOnline = false;
 
   try {
     const eonetProbe = await fetchWithTimeout(
@@ -119,9 +141,13 @@ app.get('/api/nasa/status', async (_req, res) => {
     powerOnline = powerProbe.ok;
   } catch {
     // Some POWER environments may not expose /system/manager/status; treat as reachable if Date header came back
-    powerOnline = lastKnownNasaDateMs !== null;
+    powerOnline = false;
   }
 
+  try {
+    const probe = await fetchWithTimeout('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi?SERVICE=WMTS&REQUEST=GetCapabilities', 5000);
+    gibsOnline = probe.ok;
+  } catch { gibsOnline = false; }
   const refDate = getReferenceUtcDate();
   const gibsRecommended = new Date(refDate.getTime() - 2 * 86400_000);
 
@@ -132,7 +158,7 @@ app.get('/api/nasa/status', async (_req, res) => {
     endpoints: {
       eonet: { online: eonetOnline, label: 'NASA EONET v3' },
       power: { online: powerOnline, label: 'NASA POWER v2' },
-      gibs: { online: true, label: 'NASA GIBS WMTS' },
+      gibs: { online: gibsOnline, label: 'NASA GIBS WMTS' },
     },
     hasCustomNasaKey: Boolean(
       process.env.NASA_API_KEY && process.env.NASA_API_KEY !== 'DEMO_KEY'
@@ -326,7 +352,7 @@ app.get('/api/nasa/power', async (req, res) => {
     const dateKeys = Array.from({length: days}, (_, index) => formatYyyymmdd(new Date(startDate.getTime() + index * 86400000)));
 
     const cleanVal = (v: number | undefined): number | null =>
-      v === undefined || v === null || v <= -900 ? null : Number(v.toFixed(2));
+      v === undefined || v === null || !Number.isFinite(v) || v <= -900 ? null : Number(v.toFixed(2));
 
     const series = dateKeys
       .map((dk) => {
@@ -362,7 +388,7 @@ app.get('/api/nasa/power', async (req, res) => {
     };
 
     const payload = {
-      isLive: series.length > 0,
+      isLive: series.some(point => Object.entries(point).some(([key,value]) => key !== 'date' && typeof value === 'number' && Number.isFinite(value))),
       source: 'NASA POWER v2 (MERRA-2 / CERES)',
       lat: Number(roundedLat),
       lon: Number(roundedLon),
@@ -405,8 +431,10 @@ app.get('/api/nasa/power', async (req, res) => {
 // NASA GIBS same-origin tile proxy.
 // Browsers request tiles from this Express server; the server fetches NASA GIBS.
 // This avoids browser-side image/CORS/connection issues while preserving NASA data.
-const GIBS_BASE_URL = 'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/';
+const GIBS_BASE_URL = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/';
 const ALLOWED_GIBS_LAYERS = new Set([
+  'MODIS_Terra_CorrectedReflectance_TrueColor',
+  'MODIS_Terra_Thermal_Anomalies_All',
   'BlueMarble_NextGeneration',
   'VIIRS_Black_Marble',
   'VIIRS_SNPP_CorrectedReflectance_TrueColor',
