@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: earthshift-api
+    runtime: python
+    plan: free
+    branch: main
+    autoDeployTrigger: commit
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    buildFilter:
+      paths:
+        - backend/**
+        - data/**
+        - requirements.txt
+        - render.yaml
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: EARTHSHIFT_DEMO_MODE
+        value: "false"
+      - key: EARTHSHIFT_CACHE_TTL_SECONDS
+        value: "300"
+      - key: EARTHSHIFT_NASA_TIMEOUT_SECONDS
+        value: "30"
+  - type: web
+    name: earthshift-web
+    runtime: node
+    plan: free
+    branch: main
+    rootDir: frontend
+    autoDeployTrigger: commit
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    buildFilter:
+      paths:
+        - frontend/**
+        - render.yaml
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: EARTHSHIFT_BACKEND_URL
+        fromService:
+          type: web
+          name: earthshift-api
+          envVarKey: RENDER_EXTERNAL_URL

@@ -154,3 +154,20 @@ Desde la raíz del proyecto:
 
 ```bash
 py -m pip install -r requirements.txt
+py -m uvicorn backend.app.main:app --reload --port 8000
+```
+
+## Frontend local
+
+En otra terminal:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+## Despliegue y actualizaciones automáticas
+
+El archivo `render.yaml` despliega la web y FastAPI en Render desde `main`.
+Cada push actualiza el servicio afectado. Consulta [la guía de despliegue](docs/DEPLOY_RENDER.md).

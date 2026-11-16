@@ -1,5 +1,6 @@
 import { compare } from './src/research/comparison.mjs';
 import {resolveGibsTile} from './src/services/gibsTiles.mjs';
+import { createBackendProxy } from './src/research/backend-proxy.mjs';
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
@@ -12,24 +13,6 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '32kb' }));
-// Same-origin access to FastAPI in development and production.
-const EARTHSHIFT_BACKEND_URL = (process.env.EARTHSHIFT_BACKEND_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
-const EARTHSHIFT_PATHS = ['/api/health', '/api/variables', '/api/regions', '/api/cells', '/api/series', '/api/intelligence'];
-app.use(EARTHSHIFT_PATHS, async (req, res) => {
-  try {
-    const upstream = await fetch(EARTHSHIFT_BACKEND_URL + req.originalUrl, {
-      method: req.method,
-      headers: { 'Content-Type': 'application/json' },
-      body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body),
-      signal: AbortSignal.timeout(90000),
-    });
-    if (!upstream.ok) return res.status(upstream.status).json({ error: 'Datos no disponibles temporalmente.' });
-    return res.status(upstream.status).json(await upstream.json());
-  } catch (error) {
-    console.error('EarthShift backend unavailable', error);
-    return res.status(503).json({ error: 'Datos no disponibles temporalmente.' });
-  }
-});
 app.post('/api/research/compare', async (req, res) => {
   try {
     if (req.body?.mode === 'synthetic') return res.status(400).json({error:'synthetic_mode_disabled'});
@@ -579,6 +562,13 @@ app.get('/api/nasa/gibs-layers', (_req, res) => {
 async function startServer() {
   const isProd = process.env.NODE_ENV === 'production' || process.argv.includes('--preview');
 
+  app.get('/healthz', (_req, res) => res.json({ status: 'ok', service: 'EarthShift web' }));
+  // Keep the NASA and comparison routes above in Node; forward remaining API
+  // requests (regions, scientific engines and Intelligence) to FastAPI.
+  app.use('/api', createBackendProxy(
+    process.env.EARTHSHIFT_BACKEND_URL || (isProd ? '' : 'http://127.0.0.1:8000'),
+  ));
+
   if (!isProd) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
@@ -600,7 +590,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Piura Watch NASA Observatory server running at http://0.0.0.0:${PORT}`);
+    console.log(`EarthShift server running at http://0.0.0.0:${PORT}`);
   });
 }
 
