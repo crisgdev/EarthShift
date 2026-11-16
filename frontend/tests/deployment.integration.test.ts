@@ -12,9 +12,11 @@ test('Vercel function serves Express API without listening, keeps API path and s
   const server=createServer((req,res)=>handler(req as Request,res as Response));
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
   const address=server.address();if(!address || typeof address==='string')throw new Error('Missing listener');
-  const get=(path:string,body?:object)=>new Promise<{status:number;data:any}>((resolve,reject)=>{
+  const get=(path:string,body?:object,extraHeaders?:Record<string,string>)=>new Promise<{status:number;data:any}>((resolve,reject)=>{
     const payload=body?JSON.stringify(body):undefined;
-    request({hostname:'127.0.0.1',port:address.port,path,method:body?'POST':'GET',headers:payload?{'Content-Type':'application/json','Content-Length':Buffer.byteLength(payload)}:{}},response=>{
+    const headers:Record<string,string|number>=payload?{'Content-Type':'application/json','Content-Length':Buffer.byteLength(payload)}:{};
+    Object.assign(headers,extraHeaders??{});
+    request({hostname:'127.0.0.1',port:address.port,path,method:body?'POST':'GET',headers},response=>{
       let body='';response.on('data',chunk=>body+=chunk);response.on('end',()=>{try{resolve({status:response.statusCode!,data:JSON.parse(body)});}catch(error){reject(error);}});
     }).on('error',reject).end(payload);
   });
@@ -37,6 +39,12 @@ test('Vercel function serves Express API without listening, keeps API path and s
     assert.equal(gibsOnce.status,200);assert.equal(new URL(gibsOnce.data.upstream).href,gibsExpected);
     const gibsTwice=await get('/api?__earthshift_path=nasa%2Fgibs-tile&path=VIIRS_SNPP_CorrectedReflectance_TrueColor%252Fdefault%252F2023-03-15%252F250m%252F2%252F0%252F0.jpg');
     assert.equal(gibsTwice.status,200);assert.equal(new URL(gibsTwice.data.upstream).href,gibsExpected);
+    // Vercel used to inject its route capture as an extra `path` value.
+    const gibsCollided=await get('/api?__earthshift_path=nasa%2Fgibs-tile&path=nasa%2Fgibs-tile&path=VIIRS_SNPP_CorrectedReflectance_TrueColor%2Fdefault%2F2023-03-15%2F250m%2F2%2F0%2F0.jpg');
+    assert.equal(gibsCollided.status,200);assert.equal(new URL(gibsCollided.data.upstream).href,gibsExpected);
+    const routeHeader=Buffer.from(JSON.stringify({earthshiftApi:'nasa/gibs-layers'})).toString('base64');
+    const fromHeader=await get('/api',undefined,{'x-now-route-matches':routeHeader});
+    assert.equal(fromHeader.status,200);assert.ok(fromHeader.data.layers.length);
     const missing=await get('/api?__earthshift_path=unknown');
     assert.equal(missing.status,404);
   } finally {

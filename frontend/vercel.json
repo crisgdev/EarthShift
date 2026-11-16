@@ -7,7 +7,7 @@
   "git": {"deploymentEnabled": true},
   "functions": {"api/index.ts": {"maxDuration": 120}},
   "rewrites": [
-    {"source": "/api/:path*", "destination": "/api?__earthshift_path=:path*"},
+    {"source": "/api/:earthshiftApi*", "destination": "/api?__earthshift_path=:earthshiftApi*"},
     {"source": "/((?!api(?:/|$)).*)", "destination": "/index.html"}
   ]
 }

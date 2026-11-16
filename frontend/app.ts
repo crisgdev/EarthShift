@@ -413,14 +413,11 @@ app.get('/api/nasa/power', async (req, res) => {
 // NASA GIBS same-origin tile proxy.
 // Browsers request tiles from this Express server; the server fetches NASA GIBS.
 // This avoids browser-side image/CORS/connection issues while preserving NASA data.
-function normalizeGibsPath(value: unknown): string {
-  const raw = Array.isArray(value) ? value[value.length - 1] : value;
-  if (typeof raw !== 'string') return '';
-
+function normalizeGibsPath(value: string): string {
   // Query strings can arrive once or twice percent-encoded depending on the
   // proxy (Vercel rewrites, CDNs, Cesium). Decode at most three layers before
   // validating the tile path so %2F never reaches resolveGibsTile().
-  let decoded = raw;
+  let decoded = value;
   for (let i = 0; i < 3; i++) {
     if (!/%[0-9a-f]{2}/i.test(decoded)) break;
     try {
@@ -434,17 +431,36 @@ function normalizeGibsPath(value: unknown): string {
   return decoded.trim();
 }
 
-app.get('/api/nasa/gibs-tile', async (req, res) => {
-  const rawPath = normalizeGibsPath(req.query.path);
+function gibsPathCandidates(value: unknown): string[] {
+  // Vercel can inject its own route capture as an extra `path` value. Try every
+  // candidate and let resolveGibsTile() decide which one is the real tile.
+  const values = Array.isArray(value) ? value : [value];
+  return values
+    .filter((item): item is string => typeof item === 'string')
+    .map(normalizeGibsPath)
+    .filter(Boolean);
+}
 
-  if (!rawPath) {
+app.get('/api/nasa/gibs-tile', async (req, res) => {
+  const candidates = gibsPathCandidates(req.query.path);
+
+  if (!candidates.length) {
     return res.status(400).json({ error: 'missing_gibs_path' });
   }
 
-  let upstreamUrl: string;
-  try {
-    upstreamUrl = resolveGibsTile(rawPath);
-  } catch {
+  let upstreamUrl: string | undefined;
+  let tilePath: string | undefined;
+  for (const candidate of candidates) {
+    try {
+      upstreamUrl = resolveGibsTile(candidate);
+      tilePath = candidate;
+      break;
+    } catch {
+      // Try the next candidate (e.g. a route-capture value injected by Vercel).
+    }
+  }
+
+  if (!upstreamUrl) {
     return res.status(400).json({ error: 'invalid_gibs_path' });
   }
 
@@ -471,7 +487,7 @@ app.get('/api/nasa/gibs-tile', async (req, res) => {
 
     const body = Buffer.from(await upstream.arrayBuffer());
     const contentType = upstream.headers.get('content-type') ??
-      (rawPath.endsWith('.png') ? 'image/png' : 'image/jpeg');
+      (tilePath?.endsWith('.png') ? 'image/png' : 'image/jpeg');
 
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=86400');

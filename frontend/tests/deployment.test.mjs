@@ -20,8 +20,8 @@ test('Vercel routes API before SPA and enables automatic branch deployments',()=
   const config=JSON.parse(readFileSync(new URL('../vercel.json',import.meta.url),'utf8'));
   assert.equal(config.git.deploymentEnabled,true);
   assert.equal(config.framework,'vite');assert.equal(config.outputDirectory,'dist');
-  assert.equal(config.rewrites[0].source,'/api/:path*');
-  assert.equal(config.rewrites[0].destination,'/api?__earthshift_path=:path*');
+  assert.equal(config.rewrites[0].source,'/api/:earthshiftApi*');
+  assert.equal(config.rewrites[0].destination,'/api?__earthshift_path=:earthshiftApi*');
   const spa=new RegExp('^'+config.rewrites[1].source+'$');
   assert.equal(spa.test('/api/series'),false);assert.equal(spa.test('/api'),false);assert.equal(spa.test('/research'),true);
 });
