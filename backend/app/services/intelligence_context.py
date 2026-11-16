@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from backend.app.routes.findings import generate_real_findings
+from backend.engines.quality import MIN_COVERAGE
 
 ENGINE_IDS = (
     "earth_paradox",
@@ -66,6 +67,11 @@ def build_intelligence_context(region: str = "BajoPiura") -> dict[str, Any]:
         "engines": engines,
         "anomalies": _annual_ndvi_anomalies(findings),
         "quality": data.get("quality", {}),
+        "analysis_readiness": {
+            "minimum_valid_fraction": MIN_COVERAGE,
+            "evaluated_engines": sum(item is not None and item.get("level") != "sin datos" for item in engines.values()),
+            "total_engines": len(ENGINE_IDS),
+        },
         "metadata": data.get("metadata", {}),
         "limitations": [spatial_limitation] if spatial_limitation else [],
     }

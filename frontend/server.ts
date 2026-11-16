@@ -1,4 +1,5 @@
 import { compare } from './src/research/comparison.mjs';
+import {resolveGibsTile} from './src/services/gibsTiles.mjs';
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
@@ -13,7 +14,7 @@ const PORT = Number(process.env.PORT) || 3000;
 app.use(express.json({ limit: '32kb' }));
 // Same-origin access to FastAPI in development and production.
 const EARTHSHIFT_BACKEND_URL = (process.env.EARTHSHIFT_BACKEND_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
-const EARTHSHIFT_PATHS = ['/api/variables', '/api/regions', '/api/cells', '/api/series', '/api/intelligence'];
+const EARTHSHIFT_PATHS = ['/api/health', '/api/variables', '/api/regions', '/api/cells', '/api/series', '/api/intelligence'];
 app.use(EARTHSHIFT_PATHS, async (req, res) => {
   try {
     const upstream = await fetch(EARTHSHIFT_BACKEND_URL + req.originalUrl, {
@@ -431,18 +432,6 @@ app.get('/api/nasa/power', async (req, res) => {
 // NASA GIBS same-origin tile proxy.
 // Browsers request tiles from this Express server; the server fetches NASA GIBS.
 // This avoids browser-side image/CORS/connection issues while preserving NASA data.
-const GIBS_BASE_URL = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/';
-const ALLOWED_GIBS_LAYERS = new Set([
-  'MODIS_Terra_CorrectedReflectance_TrueColor',
-  'MODIS_Terra_Thermal_Anomalies_All',
-  'BlueMarble_NextGeneration',
-  'VIIRS_Black_Marble',
-  'VIIRS_SNPP_CorrectedReflectance_TrueColor',
-  'MODIS_Terra_Land_Surface_Temp_Day',
-  'IMERG_Precipitation_Rate',
-  'MODIS_Terra_NDVI_8Day',
-]);
-
 app.get('/api/nasa/gibs-tile', async (req, res) => {
   const rawPath = typeof req.query.path === 'string' ? req.query.path : '';
 
@@ -450,50 +439,18 @@ app.get('/api/nasa/gibs-tile', async (req, res) => {
     return res.status(400).json({ error: 'missing_gibs_path' });
   }
 
-  let tilePath: string;
+  let upstreamUrl: string;
   try {
-    tilePath = decodeURIComponent(rawPath);
+    upstreamUrl = resolveGibsTile(rawPath);
   } catch {
     return res.status(400).json({ error: 'invalid_gibs_path' });
-  }
-
-  if (
-    tilePath.startsWith('/') ||
-    tilePath.includes('..') ||
-    tilePath.includes('://') ||
-    tilePath.includes('?') ||
-    tilePath.includes('#')
-  ) {
-    return res.status(400).json({ error: 'invalid_gibs_path' });
-  }
-
-  const parts = tilePath.split('/');
-  if (parts.length !== 7) {
-    return res.status(400).json({ error: 'invalid_gibs_path' });
-  }
-
-  const [layer, style, time, matrixSet, matrix, row, tileFile] = parts;
-
-  if (!ALLOWED_GIBS_LAYERS.has(layer)) {
-    return res.status(400).json({ error: 'unsupported_gibs_layer' });
-  }
-
-  if (
-    style !== 'default' ||
-    !/^(default|\d{4}-\d{2}-\d{2})$/.test(time) ||
-    !/^[A-Za-z0-9_.-]+$/.test(matrixSet) ||
-    !/^\d+$/.test(matrix) ||
-    !/^\d+$/.test(row) ||
-    !/^\d+\.(?:jpg|png)$/.test(tileFile)
-  ) {
-    return res.status(400).json({ error: 'invalid_gibs_tile' });
   }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30000);
 
   try {
-    const upstream = await fetch(GIBS_BASE_URL + tilePath, {
+    const upstream = await fetch(upstreamUrl, {
       signal: controller.signal,
       headers: {
         'User-Agent': 'PiuraWatch-NASA-Observatory/1.0',
@@ -512,7 +469,7 @@ app.get('/api/nasa/gibs-tile', async (req, res) => {
 
     const body = Buffer.from(await upstream.arrayBuffer());
     const contentType = upstream.headers.get('content-type') ??
-      (tileFile.endsWith('.png') ? 'image/png' : 'image/jpeg');
+      (rawPath.endsWith('.png') ? 'image/png' : 'image/jpeg');
 
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=86400');
@@ -620,12 +577,17 @@ app.get('/api/nasa/gibs-layers', (_req, res) => {
 });
 
 async function startServer() {
-  const isProd = process.env.NODE_ENV === 'production';
+  const isProd = process.env.NODE_ENV === 'production' || process.argv.includes('--preview');
 
   if (!isProd) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: process.env.DISABLE_HMR === 'true' ? false : {
+          port: Number(process.env.EARTHSHIFT_HMR_PORT) || PORT + 21678,
+        },
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);

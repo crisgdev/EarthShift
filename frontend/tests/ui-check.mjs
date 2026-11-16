@@ -12,7 +12,7 @@ await page.route('**/api/**',route=>{
  return route.fulfill({json:responses[path]||{}});
 });
 try {
- await page.goto('http://localhost:3000',{waitUntil:'domcontentloaded'});
+ await page.goto(process.env.EARTHSHIFT_TEST_URL || 'http://localhost:3000',{waitUntil:'domcontentloaded'});
  await page.getByRole('navigation').getByRole('button',{name:'Compare areas',exact:true}).click();
  await page.locator('.results .result-card').first().waitFor();
  assert.equal(await page.locator('.area-A select option').count(),1);

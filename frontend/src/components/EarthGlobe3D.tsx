@@ -822,7 +822,8 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
     ro.observe(container);
 
     let frameId = 0;
-    const clock = new THREE.Clock();
+    const clock = new THREE.Timer();
+    clock.connect(document);
     let currentSunRad = THREE.MathUtils.degToRad(sunAngleDegRef.current);
 
     function afterDraw(cb: () => void) {
@@ -851,8 +852,9 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
 
     function tick() {
       if (disposed) return;
+      clock.update();
       const dt = Math.min(clock.getDelta(), 0.1);
-      const elapsed = reducedMotion.current ? 0 : clock.getElapsedTime();
+      const elapsed = reducedMotion.current ? 0 : clock.getElapsed();
 
       if (autoRotateRef.current && !glideActive && !reducedMotion.current) {
         earthGroup.rotation.y += dt * 0.08;
@@ -926,6 +928,7 @@ export const EarthGlobe3D: React.FC<EarthGlobe3DProps> = ({
 
     return () => {
       disposed = true;
+      clock.dispose();
       cancelAnimationFrame(frameId);
       clearTimeout(frameId);
       ro.disconnect();

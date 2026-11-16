@@ -7,7 +7,7 @@
     "dev": "node node_modules/tsx/dist/cli.mjs server.ts",
     "start": "node node_modules/tsx/dist/cli.mjs server.ts",
     "build": "node node_modules/vite/bin/vite.js build",
-    "preview": "vite preview",
+    "preview": "node node_modules/tsx/dist/cli.mjs server.ts --preview",
     "clean": "rm -rf dist server.js",
     "lint": "node node_modules/typescript/bin/tsc --noEmit",
     "test": "node --test tests/*.test.mjs"

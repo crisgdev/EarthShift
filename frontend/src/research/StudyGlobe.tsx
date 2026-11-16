@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLanguage } from './i18n';
+import {fetchNasaGibsLayers} from '../services/nasaClient';
 export type StudyArea={lat:number;lon:number;radiusKm:number};
 const ROOT='https://cesium.com/downloads/cesiumjs/releases/1.131/Build/Cesium/';
 let enginePromise:Promise<any>|undefined;
@@ -15,7 +16,9 @@ export function loadEngine():Promise<any> {
 const colors=['#6ee7b7','#fbbf24'];
 export function StudyGlobe({areas,editing,onPick}:{areas:(StudyArea|null)[];editing:number;onPick:(area:StudyArea)=>void}) {
   const {t}=useLanguage();const ref=useRef<HTMLDivElement>(null),viewer=useRef<any>(null),current=useRef({areas,editing,onPick});current.current={areas,editing,onPick};
-  const [ready,setReady]=useState(false),[error,setError]=useState(false),[attempt,setAttempt]=useState(0),[layerUnavailable,setLayerUnavailable]=useState(false),[layer,setLayer]=useState('natural'),[date,setDate]=useState('2023-03-15');
+  const [ready,setReady]=useState(false),[error,setError]=useState(false),[attempt,setAttempt]=useState(0),[layerUnavailable,setLayerUnavailable]=useState(false),[layer,setLayer]=useState('natural'),[date,setDate]=useState('');
+  const [layerDates,setLayerDates]=useState<Record<string,string>>({});
+  useEffect(()=>{let cancelled=false;fetchNasaGibsLayers().then(data=>{if(cancelled)return;setLayerDates(Object.fromEntries(data.layers.map(item=>[item.id,item.defaultDate])));}).catch(()=>{});return()=>{cancelled=true;};},[]);
   const overlay=useRef<any>(null);
   function fly(kind:string) {const C=(window as any).Cesium,v=viewer.current;if(!v||!C)return;
     const duration=matchMedia('(prefers-reduced-motion: reduce)').matches?0:1.2;
@@ -46,11 +49,12 @@ export function StudyGlobe({areas,editing,onPick}:{areas:(StudyArea|null)[];edit
     return()=>{cancelled=true;setReady(false);viewer.current=null;overlay.current=null;handler?.destroy();if(v&&!v.isDestroyed())v.destroy();};
   },[attempt]);
   useEffect(()=>{const v=viewer.current,C=(window as any).Cesium;if(!v||!ready)return;v.entities.removeAll();areas.forEach((a,i)=>{if(!a||!Number.isFinite(a.lat)||!Number.isFinite(a.lon)||!Number.isFinite(a.radiusKm)||a.radiusKm<1)return;v.entities.add({id:i===0?'A':'B',position:C.Cartesian3.fromDegrees(a.lon,a.lat),ellipse:{semiMajorAxis:a.radiusKm*1000,semiMinorAxis:a.radiusKm*1000,material:C.Color.fromCssColorString(colors[i]).withAlpha(.22),outline:true,outlineColor:C.Color.fromCssColorString(colors[i])},label:{text:i===0?'A':'B',font:'bold 18px Arial',fillColor:C.Color.fromCssColorString(colors[i]),outlineColor:C.Color.BLACK,outlineWidth:3,style:C.LabelStyle.FILL_AND_OUTLINE,disableDepthTestDistance:Infinity,pixelOffset:new C.Cartesian2(0,-18)}});});v.scene.requestRender();},[areas,ready]);
-  useEffect(()=>{const v=viewer.current,C=(window as any).Cesium;if(!v||!ready)return;setLayerUnavailable(false);let removeError:(()=>void)|undefined;if(overlay.current){v.imageryLayers.remove(overlay.current);overlay.current=null;}if(layer!=='natural') {
+  useEffect(()=>{const v=viewer.current,C=(window as any).Cesium;if(!v||!ready)return;setLayerUnavailable(false);let removeError:(()=>void)|undefined;if(overlay.current){v.imageryLayers.remove(overlay.current);overlay.current=null;}if(layer!=='natural' && date) {
     const id=layer==='ndvi'?'MODIS_Terra_NDVI_8Day':layer==='lst'?'MODIS_Terra_Land_Surface_Temp_Day':'IMERG_Precipitation_Rate';
     const level=layer==='ndvi'?9:layer==='lst'?7:6;
     const matrix='GoogleMapsCompatible_Level'+level;
-    const provider=new C.UrlTemplateImageryProvider({url:`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${id}/default/${date}/${matrix}/{z}/{y}/{x}.png`,maximumLevel:level,credit:'NASA EOSDIS GIBS'});
+    const path=encodeURIComponent(`${id}/default/${date}/${matrix}/`);
+    const provider=new C.UrlTemplateImageryProvider({url:`/api/nasa/gibs-tile?path=${path}{z}%2F{y}%2F{x}.png`,maximumLevel:level,credit:'NASA EOSDIS GIBS'});
     removeError=provider.errorEvent.addEventListener(()=>setLayerUnavailable(true));
     overlay.current=v.imageryLayers.addImageryProvider(provider);overlay.current.alpha=.65;
   }v.scene.requestRender();return()=>removeError?.();},[layer,date,ready]);
@@ -62,7 +66,7 @@ export function StudyGlobe({areas,editing,onPick}:{areas:(StudyArea|null)[];edit
       <button onClick={()=>fly('world')}>{t('world')}</button><button onClick={()=>fly('both')}>{t('focus')}</button>
       <button aria-label={t('rotateLeft')} onClick={()=>fly('left')}>↶</button><button aria-label={t('rotateRight')} onClick={()=>fly('right')}>↷</button><button aria-label={t('zoomIn')} onClick={()=>fly('in')}>+</button><button aria-label={t('zoomOut')} onClick={()=>fly('out')}>−</button>
     </div>
-    <div className="map-layers"><label>{t('layer')}<select value={layer} onChange={e=>setLayer(e.target.value)}><option value="natural">{t('imagery')}</option><option value="ndvi">NASA GIBS · NDVI</option><option value="lst">NASA GIBS · {t('lst')}</option><option value="precipitation">NASA GIBS · {t('precipitation')}</option></select></label>{layer!=='natural'&&<label>{t('gibsDate')}<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>}</div>
+    <div className="map-layers"><label>{t('layer')}<select value={layer} onChange={e=>{const next=e.target.value;setLayer(next);setDate(layerDates[next==='ndvi'?'MODIS_Terra_NDVI_8Day':next==='lst'?'MODIS_Terra_Land_Surface_Temp_Day':'IMERG_Precipitation_Rate']||'');}}><option value="natural">{t('imagery')}</option><option value="ndvi" disabled={!layerDates.MODIS_Terra_NDVI_8Day}>NASA GIBS · NDVI</option><option value="lst" disabled={!layerDates.MODIS_Terra_Land_Surface_Temp_Day}>NASA GIBS · {t('lst')}</option><option value="precipitation" disabled={!layerDates.IMERG_Precipitation_Rate}>NASA GIBS · {t('precipitation')}</option></select></label>{layer!=='natural'&&<label>{t('gibsDate')}<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>}</div>
     <p className="map-hint">{layerUnavailable&&<span role="status">{t('layerUnavailable')} </span>}{t('editing')} {editing===0?'A':'B'} · {t('mapHint')}</p>
   </section>;
 }
