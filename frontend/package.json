@@ -3,14 +3,16 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {"node": "24.x"},
   "scripts": {
     "dev": "node node_modules/tsx/dist/cli.mjs server.ts",
     "start": "node node_modules/tsx/dist/cli.mjs server.ts",
-    "build": "node node_modules/vite/bin/vite.js build",
+    "build": "node scripts/check-deployment.mjs && node node_modules/vite/bin/vite.js build",
     "preview": "node node_modules/tsx/dist/cli.mjs server.ts --preview",
     "clean": "rm -rf dist server.js",
     "lint": "node node_modules/typescript/bin/tsc --noEmit",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "test:deployment": "node node_modules/tsx/dist/cli.mjs --test tests/deployment.integration.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

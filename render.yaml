@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: earthshift-api
+    runtime: python
+    plan: free
+    branch: main
+    autoDeployTrigger: commit
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    buildFilter:
+      paths:
+        - backend/**
+        - data/processed/**
+        - requirements.txt
+        - render.yaml
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.2
+      - key: EARTHSHIFT_ENV
+        value: production
+      - key: EARTHSHIFT_FRONTEND_ORIGINS
+        value: https://earth-shift.vercel.app
+      - key: EARTHSHIFT_DEMO_MODE
+        value: "false"
+      - key: EARTHSHIFT_PHENOMENA_AI_ENABLED
+        value: "false"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile

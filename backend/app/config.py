@@ -32,7 +32,7 @@ FRONTEND_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         "EARTHSHIFT_FRONTEND_ORIGINS",
-        (
+        "" if os.getenv("EARTHSHIFT_ENV") == "production" else (
             "http://localhost:3000,"
             "http://127.0.0.1:3000,"
             "http://localhost:5173,"

@@ -154,3 +154,23 @@ Desde la raíz del proyecto:
 
 ```bash
 py -m pip install -r requirements.txt
+py -m uvicorn backend.app.main:app --reload --port 8000
+```
+
+En otra terminal:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+## Despliegue automático
+
+El frontend se prepara para Vercel y FastAPI para Render, ambos conectados a GitHub.
+`main` corresponde a producción; las otras ramas pueden generar previews del frontend.
+
+La configuración de cuentas, variables, desarrollo local y verificación pública está
+en [docs/deployment.md](docs/deployment.md). En Vercel, la raíz del proyecto es
+`frontend` y `EARTHSHIFT_BACKEND_URL` debe contener la URL pública HTTPS de FastAPI
+en los entornos Production y Preview. Las claves de Groq solo se configuran en el backend.
