@@ -1,5 +1,11 @@
 import os
 
+from dotenv import load_dotenv
+
+
+# Cargar variables desde el archivo .env de la raíz
+load_dotenv()
+
 
 APP_NAME = "EarthShift API"
 
@@ -36,7 +42,42 @@ FRONTEND_ORIGINS = [
     if origin.strip()
 ]
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-EARTHSHIFT_DEMO_MODE = os.getenv("EARTHSHIFT_DEMO_MODE", "false").lower() == "true"
-EARTHSHIFT_PHENOMENA_AI_ENABLED = os.getenv("EARTHSHIFT_PHENOMENA_AI_ENABLED", "false").lower() == "true"
+
+# EarthShift Advisor -> Groq
+GROQ_API_KEY = os.getenv(
+    "GROQ_API_KEY"
+)
+
+GROQ_MODEL = os.getenv(
+    "GROQ_MODEL",
+    "llama-3.3-70b-versatile",
+)
+
+
+# EarthShift Phenomena -> Gemini
+GEMINI_API_KEY = os.getenv(
+    "GEMINI_API_KEY"
+)
+
+GEMINI_MODEL = os.getenv(
+    "GEMINI_MODEL",
+    "gemini-2.5-flash",
+)
+
+
+EARTHSHIFT_DEMO_MODE = (
+    os.getenv(
+        "EARTHSHIFT_DEMO_MODE",
+        "false",
+    ).lower()
+    == "true"
+)
+
+
+EARTHSHIFT_PHENOMENA_AI_ENABLED = (
+    os.getenv(
+        "EARTHSHIFT_PHENOMENA_AI_ENABLED",
+        "false",
+    ).lower()
+    == "true"
+)
