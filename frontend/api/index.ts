@@ -1,5 +1,5 @@
 import type {Request,Response} from 'express';
-import app from '../app';
+import app from '../app.js';
 
 // Vercel sends every /api/* request to this one shared Express function.
 export default function handler(req:Request,res:Response) {
