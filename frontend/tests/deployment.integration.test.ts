@@ -32,6 +32,11 @@ test('Vercel function serves Express API without listening, keeps API path and s
     assert.deepEqual(posted.data.body,{region:'BajoPiura'});
     const nasa=await get('/api?__earthshift_path=nasa%2Fgibs-layers');
     assert.equal(nasa.status,200);assert.ok(nasa.data.layers.length);
+    const gibsExpected='https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/2023-03-15/250m/2/0/0.jpg';
+    const gibsOnce=await get('/api?__earthshift_path=nasa%2Fgibs-tile&path=VIIRS_SNPP_CorrectedReflectance_TrueColor%2Fdefault%2F2023-03-15%2F250m%2F2%2F0%2F0.jpg');
+    assert.equal(gibsOnce.status,200);assert.equal(new URL(gibsOnce.data.upstream).href,gibsExpected);
+    const gibsTwice=await get('/api?__earthshift_path=nasa%2Fgibs-tile&path=VIIRS_SNPP_CorrectedReflectance_TrueColor%252Fdefault%252F2023-03-15%252F250m%252F2%252F0%252F0.jpg');
+    assert.equal(gibsTwice.status,200);assert.equal(new URL(gibsTwice.data.upstream).href,gibsExpected);
     const missing=await get('/api?__earthshift_path=unknown');
     assert.equal(missing.status,404);
   } finally {

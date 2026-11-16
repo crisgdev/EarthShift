@@ -413,8 +413,29 @@ app.get('/api/nasa/power', async (req, res) => {
 // NASA GIBS same-origin tile proxy.
 // Browsers request tiles from this Express server; the server fetches NASA GIBS.
 // This avoids browser-side image/CORS/connection issues while preserving NASA data.
+function normalizeGibsPath(value: unknown): string {
+  const raw = Array.isArray(value) ? value[value.length - 1] : value;
+  if (typeof raw !== 'string') return '';
+
+  // Query strings can arrive once or twice percent-encoded depending on the
+  // proxy (Vercel rewrites, CDNs, Cesium). Decode at most three layers before
+  // validating the tile path so %2F never reaches resolveGibsTile().
+  let decoded = raw;
+  for (let i = 0; i < 3; i++) {
+    if (!/%[0-9a-f]{2}/i.test(decoded)) break;
+    try {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    } catch {
+      break;
+    }
+  }
+  return decoded.trim();
+}
+
 app.get('/api/nasa/gibs-tile', async (req, res) => {
-  const rawPath = typeof req.query.path === 'string' ? req.query.path : '';
+  const rawPath = normalizeGibsPath(req.query.path);
 
   if (!rawPath) {
     return res.status(400).json({ error: 'missing_gibs_path' });
